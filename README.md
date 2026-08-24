@@ -22,12 +22,12 @@ pnpm dev
 
 访问 `http://localhost:3000`，首页会跳转到 `/chat`。
 
-确保 Go 后端运行在 `CHAT_AGENT_API_URL` 指定的地址。当前后端尚未实现 `POST /api/chat`，因此发送消息会显示连接或接口错误。
+`pnpm dev` 会连接本地 Chat Agent：`http://localhost:9998`。请先启动该地址上的后端。
 
 ## 环境变量
 
 ```dotenv
-CHAT_AGENT_API_URL=http://localhost:8080
+API_URL=http://localhost:9998
 ```
 
 该变量只在 Next.js 服务端读取。浏览器请求 `/api/chat`，由 Route Handler 转发到 Go 后端，避免暴露真实后端地址并减少跨域配置。

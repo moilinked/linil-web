@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server"
 
+import { getApiUrl } from "@/config/api"
 import type { ChatRequest } from "@/features/chat/types"
 
 const maxMessageLength = 10_000
 
 export async function POST(request: Request) {
-  const apiBaseURL = process.env.CHAT_AGENT_API_URL
+  const apiBaseURL = getApiUrl()
   if (!apiBaseURL) {
-    return NextResponse.json({ error: "服务端缺少 CHAT_AGENT_API_URL 配置" }, { status: 500 })
+    return NextResponse.json({ error: "服务端缺少 API_URL 配置" }, { status: 500 })
   }
 
   const body = (await request.json().catch(() => null)) as Partial<ChatRequest> | null
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
   try {
     backendURL = new URL("/api/chat", apiBaseURL)
   } catch {
-    return NextResponse.json({ error: "CHAT_AGENT_API_URL 配置无效" }, { status: 500 })
+    return NextResponse.json({ error: "API_URL 配置无效" }, { status: 500 })
   }
 
   try {
