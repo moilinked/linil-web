@@ -29,13 +29,13 @@ export function LoginDialog() {
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>登录</DialogTitle>
+          <DialogTitle>Login</DialogTitle>
           <DialogDescription>
-            登录后即可开始对话。也可以前往{" "}
+            Log in to start a conversation. You can also visit the{" "}
             <Link href="/login" onClick={closeLogin}>
-              登录页面
+              login page
             </Link>
-            。
+            .
           </DialogDescription>
         </DialogHeader>
         <LoginForm />

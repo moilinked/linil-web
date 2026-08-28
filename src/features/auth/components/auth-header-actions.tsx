@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { User } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/features/auth/auth-context"
@@ -22,19 +21,27 @@ function getInitials(name: string) {
 
 export function AuthHeaderActions() {
   const { user, isAuthenticated } = useAuth()
-  const label = isAuthenticated && user ? user.name : "登录"
+
+  if (!isAuthenticated || !user) {
+    return (
+      <Link
+        href="/login"
+        className="rounded-full px-3 py-2 text-base font-medium text-foreground outline-none transition-opacity hover:opacity-70 focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        Login
+      </Link>
+    )
+  }
 
   return (
     <Link
       href="/login"
-      aria-label={label}
-      title={label}
+      aria-label={user.name}
+      title={user.name}
       className="inline-flex rounded-full outline-none transition-opacity hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <Avatar>
-        <AvatarFallback>
-          {isAuthenticated && user ? getInitials(user.name) : <User aria-hidden="true" className="size-4" />}
-        </AvatarFallback>
+        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
       </Avatar>
     </Link>
   )

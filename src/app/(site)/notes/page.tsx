@@ -3,16 +3,16 @@ import type { Metadata } from "next"
 import { ContentPlaceholder } from "@/components/content/content-placeholder"
 
 export const metadata: Metadata = {
-  title: "学习笔记",
-  description: "开发与 AI Agent 学习笔记",
+  title: "Notes",
+  description: "Notes on development, AI agents, and project practice",
 }
 
 export default function NotesPage() {
   return (
     <ContentPlaceholder
       eyebrow="Notes"
-      title="学习笔记"
-      description="这里将用于整理开发实践、AI Agent 原理和项目学习记录，内容体系会在 Chat MVP 完成后接入。"
+      title="Learning Notes"
+      description="This space will organize development practices, AI agent concepts, and project learnings. The content system will be added after the Chat MVP is complete."
     />
   )
 }

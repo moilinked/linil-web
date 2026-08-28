@@ -20,11 +20,11 @@ export async function loginRequest(request: LoginRequest): Promise<AuthUser> {
   const payload = await readAuthPayload(response)
 
   if (!response.ok) {
-    throw new Error(getErrorMessage(payload, "登录失败"))
+    throw new Error(getErrorMessage(payload, "Login failed"))
   }
 
   if (!payload || !("user" in payload) || typeof payload.user?.name !== "string") {
-    throw new Error("登录服务返回了无效响应")
+    throw new Error("The login service returned an invalid response")
   }
 
   return payload.user
@@ -37,6 +37,6 @@ export async function logoutRequest(): Promise<void> {
 
   if (!response.ok) {
     const payload = await readAuthPayload(response)
-    throw new Error(getErrorMessage(payload, "退出登录失败"))
+    throw new Error(getErrorMessage(payload, "Logout failed"))
   }
 }

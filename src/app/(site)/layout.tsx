@@ -7,9 +7,9 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
 
   return (
     <AuthProvider initialUser={user}>
-      <div className="flex min-h-screen flex-col">
+      <div className="flex h-dvh flex-col overflow-hidden">
         <SiteHeader />
-        <main className="flex flex-1">{children}</main>
+        <main className="flex min-h-0 flex-1 overflow-hidden">{children}</main>
       </div>
     </AuthProvider>
   )

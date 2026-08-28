@@ -20,7 +20,7 @@ export function useAuth() {
   const context = use(AuthContext)
 
   if (!context) {
-    throw new Error("useAuth 必须在 AuthProvider 内使用")
+    throw new Error("useAuth must be used within an AuthProvider")
   }
 
   return context

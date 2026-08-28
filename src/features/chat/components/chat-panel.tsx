@@ -1,7 +1,8 @@
 "use client"
 
-import { type KeyboardEvent, type SubmitEvent, useRef, useState } from "react"
-import { ArrowDownIcon, Bot, LoaderCircle, SendHorizontal, User } from "lucide-react"
+import Image from "next/image"
+import { type KeyboardEvent, type SubmitEvent, useState } from "react"
+import { ArrowDownIcon, ArrowUpIcon, LoaderCircle, RotateCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +16,8 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/features/auth/auth-context"
 import { sendChatMessage } from "@/features/chat/chat-api"
+import { ChatMarkdown } from "@/features/chat/components/chat-markdown"
+import { getChatSessionId, startNewChatSession } from "@/features/chat/conversation-session"
 import type { ChatMessage } from "@/features/chat/types"
 import { cn } from "@/lib/utils"
 
@@ -22,23 +25,28 @@ const initialMessages: ChatMessage[] = [
   {
     id: "welcome",
     role: "assistant",
-    content: "发送消息开始对话",
+    content: "Send a message to start a conversation.",
   },
 ]
 
 export function ChatPanel() {
-  const { isAuthenticated, openLogin } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [messages, setMessages] = useState(initialMessages)
   const [input, setInput] = useState("")
   const [error, setError] = useState("")
   const [isSending, setIsSending] = useState(false)
-  const sessionIdRef = useRef<string | null>(null)
+
+  function handleNewChat() {
+    startNewChatSession()
+    setMessages(initialMessages)
+    setInput("")
+    setError("")
+  }
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (!isAuthenticated) {
-      openLogin()
       return
     }
 
@@ -59,11 +67,15 @@ export function ChatPanel() {
     setIsSending(true)
 
     try {
-      sessionIdRef.current ??= crypto.randomUUID()
-      const response = await sendChatMessage({
-        session_id: sessionIdRef.current,
-        message: content,
-      })
+      const response = await sendChatMessage(
+        {
+          session_id: getChatSessionId(),
+          message: content,
+        },
+        {
+          idempotencyKey: userMessage.id,
+        },
+      )
 
       setMessages((current) => [
         ...current,
@@ -74,7 +86,7 @@ export function ChatPanel() {
         },
       ])
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "发送消息失败")
+      setError(requestError instanceof Error ? requestError.message : "Failed to send message")
     } finally {
       setIsSending(false)
     }
@@ -92,99 +104,114 @@ export function ChatPanel() {
   }
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="border-b px-4 py-3 sm:px-5">
-        <h1 className="font-semibold">Chat Agent</h1>
-      </div>
-
-      <MessageScrollerProvider autoScroll>
-        <MessageScroller className="min-h-0 flex-1">
-          <MessageScrollerViewport aria-label="对话记录">
-            <MessageScrollerContent
-              aria-busy={isSending}
-              className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6"
-            >
-              {messages.map((message) => {
-                const isUser = message.role === "user"
-
-                return (
-                  <MessageScrollerItem
-                    key={message.id}
-                    messageId={message.id}
-                    scrollAnchor={isUser}
-                  >
-                    <article className={cn("flex items-start gap-3", isUser && "flex-row-reverse")}>
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                        {isUser ? <User aria-hidden="true" className="size-4" /> : <Bot aria-hidden="true" className="size-4" />}
-                      </div>
-                      <div
-                        className={cn(
-                          "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-6 whitespace-pre-wrap",
-                          isUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
-                        )}
-                      >
-                        {message.content}
-                      </div>
-                    </article>
-                  </MessageScrollerItem>
-                )
-              })}
-
-              {isSending ? (
-                <MessageScrollerItem messageId="thinking">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-                    <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-                    正在思考…
-                  </div>
-                </MessageScrollerItem>
-              ) : null}
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-          <MessageScrollerButton>
-            <ArrowDownIcon aria-hidden="true" />
-            <span className="sr-only">跳到最新消息</span>
-          </MessageScrollerButton>
-        </MessageScroller>
-      </MessageScrollerProvider>
-
-      <form onSubmit={handleSubmit} className="border-t bg-background p-3 sm:p-4">
-        <div className="mx-auto w-full max-w-3xl">
-          <div
-            className={cn(
-              "flex items-end gap-2 rounded-xl border bg-background p-2 shadow-xs focus-within:ring-2 focus-within:ring-ring/30",
-              !isAuthenticated && "cursor-pointer",
-            )}
-            onClick={isAuthenticated ? undefined : openLogin}
+    <section className="flex h-full min-h-0 flex-1 overflow-hidden px-4 pb-8 sm:px-6">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[870px] flex-1 flex-col overflow-hidden rounded-[24px] border border-white/60 bg-white/40 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.04)] backdrop-blur-[12px] transition-shadow focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.08)] sm:p-[25px]">
+        <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-3 py-2">
+          <h1 className="font-semibold">New Chat</h1>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Start a new conversation"
+            className="size-8 rounded-full"
+            onClick={handleNewChat}
+            disabled={isSending}
           >
+            <RotateCw aria-hidden="true" className="size-4" />
+          </Button>
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <MessageScrollerProvider autoScroll>
+            <MessageScroller className="min-h-0 flex-1 overflow-hidden">
+              <MessageScrollerViewport aria-label="Conversation">
+                <MessageScrollerContent aria-busy={isSending} className="flex min-h-full w-full flex-col px-3 py-4">
+                  {!isAuthenticated ? (
+                    <div className="flex flex-1 items-center justify-center px-6 text-center">
+                      <h2 className="max-w-sm text-xl font-semibold tracking-tight">
+                        Please log in to start a conversation.
+                      </h2>
+                    </div>
+                  ) : (
+                    messages.map((message) => {
+                      const isUser = message.role === "user"
+
+                      return (
+                        <MessageScrollerItem key={message.id} messageId={message.id} scrollAnchor={isUser}>
+                          <article className={cn("flex items-start", isUser && "justify-end")}>
+                            {isUser ? (
+                              <div className="max-w-[85%] rounded-[20px] bg-muted px-4 py-2.5 text-sm leading-6 whitespace-pre-wrap text-foreground">
+                                {message.content}
+                              </div>
+                            ) : (
+                              <ChatMarkdown content={message.content} className="max-w-[85%] text-foreground" />
+                            )}
+                          </article>
+                        </MessageScrollerItem>
+                      )
+                    })
+                  )}
+
+                  {isSending ? (
+                    <MessageScrollerItem messageId="thinking">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+                        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                        Thinking…
+                      </div>
+                    </MessageScrollerItem>
+                  ) : null}
+                </MessageScrollerContent>
+              </MessageScrollerViewport>
+              <MessageScrollerButton>
+                <ArrowDownIcon aria-hidden="true" />
+                <span className="sr-only">Jump to latest message</span>
+              </MessageScrollerButton>
+            </MessageScroller>
+          </MessageScrollerProvider>
+        </div>
+
+        <form onSubmit={handleSubmit} className="shrink-0">
+          <div className="flex w-full flex-col rounded-[20px] bg-muted px-3 py-2.5">
             <Textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isAuthenticated ? "输入消息，Enter 发送，Shift + Enter 换行" : "登录后即可开始对话"}
-              aria-label="聊天消息"
+              placeholder={isAuthenticated ? "Type a message…" : "Please log in to start a conversation"}
+              aria-label="Chat message"
               rows={1}
-              className="max-h-40 min-h-10 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
+              className="max-h-40 min-h-12 resize-none border-0 bg-transparent px-0 py-1 text-base leading-6 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:bg-transparent disabled:opacity-70"
               disabled={!isAuthenticated || isSending}
             />
-            {isAuthenticated ? (
-              <Button type="submit" size="icon" aria-label="发送消息" disabled={!input.trim() || isSending}>
+            <div className="mt-2 flex items-center justify-between">
+              <span
+                aria-hidden="true"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-background"
+              >
+                <Image src="/chat-add.svg" alt="" width={14} height={14} className="size-3.5" />
+              </span>
+              <Button
+                type="submit"
+                size="icon"
+                aria-label="Send message"
+                className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90"
+                disabled={!isAuthenticated || !input.trim() || isSending}
+              >
                 {isSending ? (
-                  <LoaderCircle aria-hidden="true" className="animate-spin" />
+                  <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
                 ) : (
-                  <SendHorizontal aria-hidden="true" />
+                  <ArrowUpIcon aria-hidden="true" className="size-4" />
                 )}
               </Button>
-            ) : (
-              <Button type="button" onClick={openLogin}>
-                登录
-              </Button>
-            )}
+            </div>
           </div>
-          <p className="mt-2 min-h-5 text-xs text-destructive" role="alert">
+        </form>
+
+        {error ? (
+          <p className="mt-2 text-xs text-destructive" role="alert">
             {error}
           </p>
-        </div>
-      </form>
+        ) : null}
+      </div>
     </section>
   )
 }

@@ -5,8 +5,8 @@ import { LoginPageContent } from "@/features/auth/components/login-page-content"
 import { getSessionUser } from "@/features/auth/session"
 
 export const metadata: Metadata = {
-  title: "登录",
-  description: "登录后即可使用 Chat Agent",
+  title: "Login",
+  description: "Log in to use Chat Agent",
 }
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {

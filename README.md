@@ -2,7 +2,7 @@
 
 `chat-agent` 的配套前端，使用 Next.js App Router、React、TypeScript、Tailwind CSS 和 shadcn/ui。
 
-当前提供 Chat 页面和 Go API 代理。项目同时预留学习笔记与 Blog 的独立路由边界，后续可按需求接入 MDX、数据库或 Headless CMS。
+项目分为 Chat、Notes 和 Works 三个模块。当前已提供 Chat 页面与 Go API 代理，Notes 和 Works 可继续接入 MDX、数据库或 Headless CMS。
 
 ## 技术栈
 
@@ -20,7 +20,7 @@ pnpm install
 pnpm dev
 ```
 
-访问 `http://localhost:3000`，首页会跳转到 `/chat`。
+访问 `http://localhost:3000`，根路径会跳转到 `/chat`。
 
 `pnpm dev` 会连接本地 Chat Agent：`http://localhost:9998`。请先启动该地址上的后端。
 
@@ -38,16 +38,20 @@ API_URL=http://localhost:9998
 src/
 ├── app/
 │   ├── (site)/
-│   │   ├── blog/
 │   │   ├── chat/
-│   │   └── notes/
-│   └── api/chat/
+│   │   ├── login/
+│   │   ├── notes/
+│   │   └── works/
+│   └── api/
+│       ├── auth/
+│       └── chat/
 ├── components/
 │   ├── content/
 │   ├── layout/
 │   └── ui/
 ├── config/
 ├── features/
+│   ├── auth/
 │   └── chat/
 └── lib/
 ```
@@ -56,7 +60,7 @@ src/
 - `features`：按业务功能组织交互逻辑、类型和组件。
 - `components/ui`：shadcn/ui 基础组件。
 - `components/layout`：站点级布局组件。
-- `components/content`：Blog 与笔记共享的展示组件。
+- `components/content`：Notes 与 Works 可复用的内容展示组件。
 - `config`：站点名称、导航等静态配置。
 
 ## 验证
@@ -70,5 +74,5 @@ pnpm build
 
 - 对接后端 `POST /api/chat`
 - 增加流式响应和会话管理
-- 为学习笔记和 Blog 选择 MDX、数据库或 CMS
+- 为 Notes 和 Works 选择 MDX、数据库或 CMS
 - 增加内容索引、标签、搜索和 SEO 元数据

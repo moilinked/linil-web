@@ -33,7 +33,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       await login(username, password)
       onSuccess?.()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "登录失败")
+      setError(requestError instanceof Error ? requestError.message : "Login failed")
     } finally {
       setIsSubmitting(false)
     }
@@ -42,28 +42,25 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
       <div className="grid gap-2">
-        <Label htmlFor={usernameId}>用户名</Label>
+        <Label htmlFor={usernameId}>Username</Label>
         <Input
           id={usernameId}
           name="username"
           autoComplete="username"
-          placeholder="请输入用户名"
+          placeholder="Enter your username"
           required
-          minLength={2}
-          maxLength={32}
           disabled={isSubmitting}
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor={passwordId}>密码</Label>
+        <Label htmlFor={passwordId}>Password</Label>
         <Input
           id={passwordId}
           name="password"
           type="password"
           autoComplete="current-password"
-          placeholder="请输入密码"
+          placeholder="Enter your password"
           required
-          minLength={6}
           disabled={isSubmitting}
         />
       </div>
@@ -71,7 +68,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         {error}
       </p>
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "登录中…" : "登录"}
+        {isSubmitting ? "Logging in…" : "Login"}
       </Button>
     </form>
   )
