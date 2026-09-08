@@ -1,17 +1,49 @@
-import type { ChatRequest, ChatResponse } from "@/features/chat/types"
+import { applyChatStreamEvent } from "@/features/chat/parse-stream-event"
+import type { ChatRequest } from "@/features/chat/types"
 
-interface SendChatMessageOptions {
+interface StreamChatMessageOptions {
   idempotencyKey: string
   signal?: AbortSignal
+  onText: (content: string) => void
+  onStatus?: (status: string) => void
 }
 
-export async function sendChatMessage(
-  request: ChatRequest,
-  { idempotencyKey, signal }: SendChatMessageOptions,
-): Promise<ChatResponse> {
-  const response = await fetch("/api/chat", {
+function consumeSse(buffer: string, onEvent: (eventName: string, data: string) => void) {
+  const parts = buffer.split("\n\n")
+  const rest = parts.pop() ?? ""
+
+  for (const block of parts) {
+    let eventName = ""
+    const dataLines: string[] = []
+
+    for (const rawLine of block.split("\n")) {
+      const line = rawLine.replace(/\r$/, "")
+      if (line.startsWith("event:")) {
+        eventName = line.slice(6).trim()
+        continue
+      }
+      if (line.startsWith("data:")) {
+        dataLines.push(line.slice(5).trimStart())
+      }
+    }
+
+    if (dataLines.length > 0) {
+      onEvent(eventName, dataLines.join("\n"))
+    }
+  }
+
+  return rest
+}
+
+function getErrorMessage(payload: { error?: string } | null, fallback: string) {
+  return payload && payload.error ? payload.error : fallback
+}
+
+export async function streamChatMessage(request: ChatRequest, { idempotencyKey, signal, onText, onStatus }: StreamChatMessageOptions) {
+  const response = await fetch("/api/chat/stream", {
     method: "POST",
     headers: {
+      Accept: "text/event-stream",
       "Content-Type": "application/json",
       "Idempotency-Key": idempotencyKey,
     },
@@ -19,16 +51,70 @@ export async function sendChatMessage(
     signal,
   })
 
-  const payload = (await response.json().catch(() => null)) as ChatResponse | { error?: string } | null
-
   if (!response.ok) {
-    const message = payload && "error" in payload ? payload.error : undefined
-    throw new Error(message || "The chat service is temporarily unavailable")
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null
+    throw new Error(getErrorMessage(payload, "The chat service is temporarily unavailable"))
   }
 
-  if (!payload || !("message" in payload) || typeof payload.message !== "string") {
-    throw new Error("The chat service returned an invalid response")
+  if (!response.body) {
+    throw new Error("The chat service returned an empty stream")
   }
 
-  return payload
+  const contentType = response.headers.get("Content-Type") || ""
+  if (!contentType.includes("text/event-stream")) {
+    const payload = (await response.json().catch(() => null)) as { message?: string; error?: string } | null
+    if (payload && typeof payload.message === "string") {
+      onText(payload.message)
+      return
+    }
+
+    throw new Error(getErrorMessage(payload, "The chat service returned an invalid response"))
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ""
+  let content = ""
+  let streamError = ""
+
+  const applyEvent = (eventName: string, data: string) => {
+    const next = applyChatStreamEvent(eventName, data, content)
+
+    if (next.status) {
+      onStatus?.(next.status)
+    }
+
+    if (next.content !== content) {
+      content = next.content
+      onText(content)
+    }
+
+    if (next.error) {
+      streamError = next.error
+    }
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) {
+      break
+    }
+
+    buffer += decoder.decode(value, { stream: true })
+    buffer = consumeSse(buffer, applyEvent)
+
+    if (streamError) {
+      await reader.cancel().catch(() => undefined)
+      throw new Error(streamError)
+    }
+  }
+
+  const remaining = decoder.decode()
+  if (remaining || buffer.trim()) {
+    consumeSse(`${buffer}${remaining}\n\n`, applyEvent)
+  }
+
+  if (streamError) {
+    throw new Error(streamError)
+  }
 }

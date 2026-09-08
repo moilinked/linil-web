@@ -1,14 +1,14 @@
 "use client";
 
-import { type KeyboardEvent, type SubmitEvent, useState } from "react";
-import { ArrowDownIcon, ArrowUpIcon, LoaderCircle, MessageSquareDashed, RotateCw, PlusIcon, PaperclipIcon, ImageIcon, TelescopeIcon, GlobeIcon } from "lucide-react";
+import { type KeyboardEvent, type SubmitEvent, useEffect, useRef, useState } from "react";
+import { ArrowDownIcon, ArrowUpIcon, LoaderCircle, MessageSquareDashed, RotateCw, PlusIcon, PaperclipIcon, ImageIcon, TelescopeIcon, GlobeIcon, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerItem, MessageScrollerProvider, MessageScrollerViewport } from "@/components/ui/message-scroller";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth/auth-context";
-import { sendChatMessage } from "@/features/chat/chat-api";
+import { streamChatMessage } from "@/features/chat/chat-api";
 import { ChatMarkdown } from "@/features/chat/components/chat-markdown";
 import { getChatSessionId, startNewChatSession } from "@/features/chat/conversation-session";
 import type { ChatMessage } from "@/features/chat/types";
@@ -46,12 +46,26 @@ export function ChatPanel() {
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   function handleNewChat() {
+    abortRef.current?.abort();
+    abortRef.current = null;
     startNewChatSession();
     setMessages([]);
     setInput("");
     setError("");
+    setIsSending(false);
+  }
+
+  function handleStopStreaming() {
+    abortRef.current?.abort();
   }
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -72,39 +86,83 @@ export function ChatPanel() {
       content,
     };
 
-    setMessages((current) => [...current, userMessage]);
+    const assistantMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: "",
+    };
+
+    setMessages((current) => [...current, userMessage, assistantMessage]);
     setInput("");
     setError("");
     setIsSending(true);
 
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      const response = await sendChatMessage(
+      await streamChatMessage(
         {
           session_id: getChatSessionId(),
           message: content,
         },
         {
           idempotencyKey: userMessage.id,
+          signal: controller.signal,
+          onText(nextContent) {
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantMessage.id ? { ...message, content: nextContent, status: nextContent ? undefined : message.status } : message,
+              ),
+            );
+          },
+          onStatus(status) {
+            setMessages((current) =>
+              current.map((message) => (message.id === assistantMessage.id && !message.content ? { ...message, status } : message)),
+            );
+          },
         },
       );
-
-      setMessages((current) => [
-        ...current,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: response.message,
-        },
-      ]);
     } catch (requestError) {
+      if (controller.signal.aborted) {
+        setMessages((current) => {
+          const assistant = current.find((message) => message.id === assistantMessage.id);
+          if (assistant?.content) {
+            return current;
+          }
+
+          return current.filter((message) => message.id !== assistantMessage.id);
+        });
+        return;
+      }
+
       setError(requestError instanceof Error ? requestError.message : "Failed to send message");
+      setMessages((current) => {
+        const assistant = current.find((message) => message.id === assistantMessage.id);
+        if (assistant?.content) {
+          return current;
+        }
+
+        return current.filter((message) => message.id !== assistantMessage.id);
+      });
     } finally {
-      setIsSending(false);
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setIsSending(false);
+        setMessages((current) =>
+          current.map((message) => (message.id === assistantMessage.id ? { ...message, status: undefined } : message)),
+        );
+      }
     }
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (!isAuthenticated) {
+      return;
+    }
+
+    if (isSending) {
       return;
     }
 
@@ -137,6 +195,8 @@ export function ChatPanel() {
                   ) : (
                     messages.map((message) => {
                       const isUser = message.role === "user";
+                      const status = !isUser && isSending ? message.status : undefined;
+                      const isWaiting = !isUser && !message.content && isSending;
 
                       return (
                         <MessageScrollerItem key={message.id} messageId={message.id} scrollAnchor={isUser}>
@@ -144,22 +204,21 @@ export function ChatPanel() {
                             {isUser ? (
                               <div className="max-w-[85%] rounded-[20px] bg-muted px-4 py-2.5 text-sm leading-6 whitespace-pre-wrap text-foreground">{message.content}</div>
                             ) : (
-                              <ChatMarkdown content={message.content} className="max-w-[85%] text-foreground" />
+                              <div className="flex max-w-[85%] flex-col gap-2">
+                                {isWaiting ? (
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+                                    <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                                    {status || "Thinking…"}
+                                  </div>
+                                ) : null}
+                                {message.content ? <ChatMarkdown content={message.content} className="text-foreground" /> : null}
+                              </div>
                             )}
                           </article>
                         </MessageScrollerItem>
                       );
                     })
                   )}
-
-                  {isSending ? (
-                    <MessageScrollerItem messageId="thinking">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-                        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-                        Thinking…
-                      </div>
-                    </MessageScrollerItem>
-                  ) : null}
                 </MessageScrollerContent>
               </MessageScrollerViewport>
               <MessageScrollerButton>
@@ -180,7 +239,7 @@ export function ChatPanel() {
               aria-label="Chat message"
               rows={1}
               className="max-h-40 min-h-12 resize-none border-0 bg-transparent px-0 py-1 text-base leading-6 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:bg-transparent disabled:opacity-70"
-              disabled={!isAuthenticated || isSending}
+              disabled={!isAuthenticated}
             />
             <div className="mt-2 flex items-center justify-between">
               <DropdownMenu>
@@ -218,15 +277,27 @@ export function ChatPanel() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button
-                type="submit"
-                size="icon"
-                aria-label="Send message"
-                className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90"
-                disabled={!isAuthenticated || !input.trim() || isSending}
-              >
-                {isSending ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <ArrowUpIcon aria-hidden="true" className="size-4" />}
-              </Button>
+              {isSending ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  aria-label="Stop generating"
+                  className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90"
+                  onClick={handleStopStreaming}
+                >
+                  <Square aria-hidden="true" className="size-3.5 fill-current" />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  size="icon"
+                  aria-label="Send message"
+                  className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90"
+                  disabled={!isAuthenticated || !input.trim()}
+                >
+                  <ArrowUpIcon aria-hidden="true" className="size-4" />
+                </Button>
+              )}
             </div>
           </div>
         </form>
