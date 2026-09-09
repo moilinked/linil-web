@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { getApiUrl } from "@/config/api"
 import { getAccessToken } from "@/features/auth/session"
-import type { ChatRequest } from "@/features/chat/types"
+import { isValidConversationId, isValidIdempotencyKey, type ChatRequest } from "@/features/chat/types"
 
 const maxMessageLength = 10_000
 
@@ -25,20 +25,26 @@ export async function createChatBackendRequest(request: Request, pathname: "/api
 
   const accessToken = await getAccessToken()
   if (!accessToken) {
-    return { error: NextResponse.json({ error: "A valid Bearer token is required" }, { status: 401 }) }
+    return { error: NextResponse.json({ error: "valid Bearer token required" }, { status: 401 }) }
   }
 
   const idempotencyKey = request.headers.get("Idempotency-Key")?.trim()
   if (!idempotencyKey) {
     return { error: NextResponse.json({ error: "Idempotency-Key is required" }, { status: 400 }) }
   }
+  if (!isValidIdempotencyKey(idempotencyKey)) {
+    return { error: NextResponse.json({ error: "Idempotency-Key is invalid" }, { status: 400 }) }
+  }
 
   const body = (await request.json().catch(() => null)) as Partial<ChatRequest> | null
-  const sessionID = body?.session_id?.trim()
+  const conversationID = body?.conversation_id?.trim()
   const message = body?.message?.trim()
 
-  if (!sessionID || !message) {
-    return { error: NextResponse.json({ error: "session_id and message are required" }, { status: 400 }) }
+  if (!message) {
+    return { error: NextResponse.json({ error: "message is required" }, { status: 400 }) }
+  }
+  if (conversationID && !isValidConversationId(conversationID)) {
+    return { error: NextResponse.json({ error: "conversation_id is invalid" }, { status: 400 }) }
   }
   if (message.length > maxMessageLength) {
     return {
@@ -66,7 +72,7 @@ export async function createChatBackendRequest(request: Request, pathname: "/api
     backendURL,
     accessToken,
     idempotencyKey,
-    body: { session_id: sessionID, message },
+    body: conversationID ? { conversation_id: conversationID, message } : { message },
   }
 }
 

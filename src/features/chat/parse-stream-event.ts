@@ -6,6 +6,7 @@ export interface ChatStreamUpdate {
   status?: string
   error?: string
   done: boolean
+  conversationId?: string
 }
 
 function readString(value: unknown) {
@@ -201,7 +202,8 @@ export function applyChatStreamEvent(eventName: string, data: string, current: s
   if (kind === "done") {
     const snapshot = parsed ? readDoneText(parsed) : ""
     const next = snapshot && !looksLikeJsonObject(snapshot) ? snapshot : current
-    return { kind: "done", content: next, done: true }
+    const conversationId = parsed ? readString(parsed.conversation_id) : ""
+    return { kind: "done", content: next, done: true, conversationId: conversationId || undefined }
   }
 
   const delta = parsed ? readDeltaText(parsed) : trimmed

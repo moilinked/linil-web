@@ -1,18 +1,29 @@
 "use client";
 
-import { type KeyboardEvent, type SubmitEvent, useEffect, useRef, useState } from "react";
-import { ArrowDownIcon, ArrowUpIcon, LoaderCircle, MessageSquareDashed, RotateCw, PlusIcon, PaperclipIcon, ImageIcon, TelescopeIcon, GlobeIcon, Square } from "lucide-react";
+import { type KeyboardEvent, type SubmitEvent, useCallback, useEffect, useRef, useState } from "react";
+import { ArrowDownIcon, ArrowUpIcon, LoaderCircle, MessageSquareDashed, PlusIcon, PaperclipIcon, ImageIcon, TelescopeIcon, GlobeIcon, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerItem, MessageScrollerProvider, MessageScrollerViewport } from "@/components/ui/message-scroller";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+  useMessageScrollerScrollable,
+} from "@/components/ui/message-scroller";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth/auth-context";
 import { streamChatMessage } from "@/features/chat/chat-api";
 import { ChatMarkdown } from "@/features/chat/components/chat-markdown";
-import { getChatSessionId, startNewChatSession } from "@/features/chat/conversation-session";
+import { ConversationTitle } from "@/features/chat/components/conversation-title";
+import { getConversation, listConversations, toChatMessages, updateConversationTitle } from "@/features/chat/conversation-api";
 import type { ChatMessage } from "@/features/chat/types";
 import { cn } from "@/lib/utils";
+
+const pageSize = 10;
 
 function ChatEmptyState({ title, description }: { title: string; description: string }) {
   return (
@@ -40,38 +51,120 @@ function getTimeOfDayGreeting() {
   return "Evening";
 }
 
+function OlderMessagesTrigger({ hasMore, visibleCount, onLoadMore }: { hasMore: boolean; visibleCount: number; onLoadMore: () => void }) {
+  const { start } = useMessageScrollerScrollable();
+  const atTop = !start;
+
+  useEffect(() => {
+    if (!hasMore || !atTop) {
+      return;
+    }
+
+    onLoadMore();
+  }, [atTop, hasMore, visibleCount, onLoadMore]);
+
+  return null;
+}
+
 export function ChatPanel() {
   const { isAuthenticated, user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [visibleCount, setVisibleCount] = useState(pageSize);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationTitle, setConversationTitle] = useState("");
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(isAuthenticated);
   const abortRef = useRef<AbortController | null>(null);
+  const conversationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    conversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadLatestConversation() {
+      setIsHydrating(true);
+      setError("");
+
+      try {
+        const conversations = await listConversations(controller.signal);
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const latest = conversations[0];
+        if (!latest) {
+          conversationIdRef.current = null;
+          setConversationId(null);
+          setConversationTitle("");
+          setMessages([]);
+          setVisibleCount(pageSize);
+          return;
+        }
+
+        const detail = await getConversation(latest.id, controller.signal);
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        conversationIdRef.current = detail.id;
+        setConversationId(detail.id);
+        setConversationTitle(detail.title);
+        setMessages(toChatMessages(detail.id, detail.messages));
+        setVisibleCount(pageSize);
+      } catch (requestError) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setError(requestError instanceof Error ? requestError.message : "Failed to load conversation");
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsHydrating(false);
+        }
+      }
+    }
+
+    void loadLatestConversation();
+
     return () => {
+      controller.abort();
       abortRef.current?.abort();
     };
-  }, []);
+  }, [isAuthenticated]);
 
-  function handleNewChat() {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    startNewChatSession();
-    setMessages([]);
-    setInput("");
-    setError("");
-    setIsSending(false);
-  }
+  const loadOlderMessages = useCallback(() => {
+    setVisibleCount((current) => Math.min(current + pageSize, messages.length));
+  }, [messages.length]);
 
   function handleStopStreaming() {
     abortRef.current?.abort();
   }
 
+  async function handleRename(nextTitle: string) {
+    const id = conversationIdRef.current;
+    if (!id) {
+      return;
+    }
+
+    const summary = await updateConversationTitle(id, nextTitle);
+    setConversationTitle(summary.title);
+  }
+
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated || isHydrating) {
       return;
     }
 
@@ -93,6 +186,7 @@ export function ChatPanel() {
     };
 
     setMessages((current) => [...current, userMessage, assistantMessage]);
+    setVisibleCount((current) => current + 2);
     setInput("");
     setError("");
     setIsSending(true);
@@ -104,23 +198,22 @@ export function ChatPanel() {
     try {
       await streamChatMessage(
         {
-          session_id: getChatSessionId(),
+          ...(conversationIdRef.current ? { conversation_id: conversationIdRef.current } : {}),
           message: content,
         },
         {
           idempotencyKey: userMessage.id,
           signal: controller.signal,
           onText(nextContent) {
-            setMessages((current) =>
-              current.map((message) =>
-                message.id === assistantMessage.id ? { ...message, content: nextContent, status: nextContent ? undefined : message.status } : message,
-              ),
-            );
+            setMessages((current) => current.map((message) => (message.id === assistantMessage.id ? { ...message, content: nextContent, status: nextContent ? undefined : message.status } : message)));
           },
           onStatus(status) {
-            setMessages((current) =>
-              current.map((message) => (message.id === assistantMessage.id && !message.content ? { ...message, status } : message)),
-            );
+            setMessages((current) => current.map((message) => (message.id === assistantMessage.id && !message.content ? { ...message, status } : message)));
+          },
+          onConversationId(nextConversationId) {
+            conversationIdRef.current = nextConversationId;
+            setConversationId(nextConversationId);
+            setConversationTitle((current) => current || content.slice(0, 40));
           },
         },
       );
@@ -150,19 +243,13 @@ export function ChatPanel() {
       if (abortRef.current === controller) {
         abortRef.current = null;
         setIsSending(false);
-        setMessages((current) =>
-          current.map((message) => (message.id === assistantMessage.id ? { ...message, status: undefined } : message)),
-        );
+        setMessages((current) => current.map((message) => (message.id === assistantMessage.id ? { ...message, status: undefined } : message)));
       }
     }
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    if (isSending) {
+    if (!isAuthenticated || isHydrating || isSending) {
       return;
     }
 
@@ -172,28 +259,40 @@ export function ChatPanel() {
     }
   }
 
+  const sessionMessages = isAuthenticated ? messages : [];
+  const displayedMessages = sessionMessages.slice(Math.max(0, sessionMessages.length - visibleCount));
+  const hasOlderMessages = isAuthenticated && visibleCount < sessionMessages.length;
+  const showHydrating = isAuthenticated && isHydrating;
+
   return (
     <section className="flex h-full min-h-0 flex-1 overflow-hidden px-4 pb-8 sm:px-6">
       <div className="mx-auto flex h-full min-h-0 w-full max-w-[870px] flex-1 flex-col overflow-hidden rounded-[24px] border border-white/60 bg-white/40 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.04)] backdrop-blur-[12px] transition-shadow focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.08)] sm:p-[25px]">
         <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-3 py-2">
-          <h1 className="font-semibold">New Chat</h1>
-          <Button type="button" variant="ghost" size="icon" aria-label="Start a new conversation" className="hidden size-8 rounded-full" onClick={handleNewChat} disabled={isSending}>
-            <RotateCw aria-hidden="true" className="size-4" />
-          </Button>
+          <ConversationTitle
+            title={isAuthenticated ? conversationTitle : ""}
+            canEdit={isAuthenticated && Boolean(conversationId)}
+            disabled={isHydrating}
+            onSave={handleRename}
+          />
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <MessageScrollerProvider autoScroll>
+          <MessageScrollerProvider autoScroll defaultScrollPosition="end">
             <MessageScroller className="min-h-0 flex-1 overflow-hidden">
-              <MessageScrollerViewport aria-label="Conversation">
-                <MessageScrollerContent aria-busy={isSending} className="flex min-h-full w-full flex-col px-3 py-4">
-                  {messages.length === 0 ? (
+              <MessageScrollerViewport aria-label="Conversation" preserveScrollOnPrepend>
+                <MessageScrollerContent aria-busy={showHydrating || (isAuthenticated && isSending)} className="flex min-h-full w-full flex-col px-3 py-4">
+                  {showHydrating ? (
+                    <div className="flex flex-1 items-center justify-center" role="status">
+                      <LoaderCircle aria-hidden="true" className="size-5 animate-spin text-muted-foreground" />
+                      <span className="sr-only">Loading conversation</span>
+                    </div>
+                  ) : displayedMessages.length === 0 ? (
                     <ChatEmptyState
                       title={isAuthenticated && user ? `${getTimeOfDayGreeting()}, ${user.name}!` : "Please log in to start a conversation."}
                       description={isAuthenticated ? "What are we working on today? Press send to start a new conversation" : "Log in first, then press send to start a new conversation"}
                     />
                   ) : (
-                    messages.map((message) => {
+                    displayedMessages.map((message) => {
                       const isUser = message.role === "user";
                       const status = !isUser && isSending ? message.status : undefined;
                       const isWaiting = !isUser && !message.content && isSending;
@@ -221,6 +320,7 @@ export function ChatPanel() {
                   )}
                 </MessageScrollerContent>
               </MessageScrollerViewport>
+              {hasOlderMessages ? <OlderMessagesTrigger hasMore={hasOlderMessages} visibleCount={visibleCount} onLoadMore={loadOlderMessages} /> : null}
               <MessageScrollerButton>
                 <ArrowDownIcon aria-hidden="true" />
                 <span className="sr-only">Jump to latest message</span>
@@ -239,7 +339,7 @@ export function ChatPanel() {
               aria-label="Chat message"
               rows={1}
               className="max-h-40 min-h-12 resize-none border-0 bg-transparent px-0 py-1 text-base leading-6 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:bg-transparent disabled:opacity-70"
-              disabled={!isAuthenticated}
+              disabled={!isAuthenticated || isHydrating}
             />
             <div className="mt-2 flex items-center justify-between">
               <DropdownMenu>
@@ -251,7 +351,7 @@ export function ChatPanel() {
                       variant="outline"
                       aria-label="Add files"
                       className="size-8 rounded-full border-border bg-background"
-                      disabled={!isAuthenticated || isSending}
+                      disabled={!isAuthenticated || isSending || isHydrating}
                     />
                   }
                 >
@@ -277,14 +377,8 @@ export function ChatPanel() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {isSending ? (
-                <Button
-                  type="button"
-                  size="icon"
-                  aria-label="Stop generating"
-                  className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90"
-                  onClick={handleStopStreaming}
-                >
+              {isSending && isAuthenticated ? (
+                <Button type="button" size="icon" aria-label="Stop generating" className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90" onClick={handleStopStreaming}>
                   <Square aria-hidden="true" className="size-3.5 fill-current" />
                 </Button>
               ) : (
@@ -293,7 +387,7 @@ export function ChatPanel() {
                   size="icon"
                   aria-label="Send message"
                   className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90"
-                  disabled={!isAuthenticated || !input.trim()}
+                  disabled={!isAuthenticated || isHydrating || !input.trim()}
                 >
                   <ArrowUpIcon aria-hidden="true" className="size-4" />
                 </Button>
@@ -302,7 +396,7 @@ export function ChatPanel() {
           </div>
         </form>
 
-        {error ? (
+        {isAuthenticated && error ? (
           <p className="mt-2 text-xs text-destructive" role="alert">
             {error}
           </p>

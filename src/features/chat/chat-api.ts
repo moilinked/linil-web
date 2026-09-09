@@ -6,6 +6,7 @@ interface StreamChatMessageOptions {
   signal?: AbortSignal
   onText: (content: string) => void
   onStatus?: (status: string) => void
+  onConversationId?: (conversationId: string) => void
 }
 
 function consumeSse(buffer: string, onEvent: (eventName: string, data: string) => void) {
@@ -39,7 +40,11 @@ function getErrorMessage(payload: { error?: string } | null, fallback: string) {
   return payload && payload.error ? payload.error : fallback
 }
 
-export async function streamChatMessage(request: ChatRequest, { idempotencyKey, signal, onText, onStatus }: StreamChatMessageOptions) {
+export async function streamChatMessage(request: ChatRequest, { idempotencyKey, signal, onText, onStatus, onConversationId }: StreamChatMessageOptions) {
+  const body: ChatRequest = request.conversation_id
+    ? { conversation_id: request.conversation_id, message: request.message }
+    : { message: request.message }
+
   const response = await fetch("/api/chat/stream", {
     method: "POST",
     headers: {
@@ -47,7 +52,7 @@ export async function streamChatMessage(request: ChatRequest, { idempotencyKey, 
       "Content-Type": "application/json",
       "Idempotency-Key": idempotencyKey,
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify(body),
     signal,
   })
 
@@ -62,9 +67,12 @@ export async function streamChatMessage(request: ChatRequest, { idempotencyKey, 
 
   const contentType = response.headers.get("Content-Type") || ""
   if (!contentType.includes("text/event-stream")) {
-    const payload = (await response.json().catch(() => null)) as { message?: string; error?: string } | null
+    const payload = (await response.json().catch(() => null)) as { conversation_id?: string; message?: string; error?: string } | null
     if (payload && typeof payload.message === "string") {
       onText(payload.message)
+      if (typeof payload.conversation_id === "string" && payload.conversation_id) {
+        onConversationId?.(payload.conversation_id)
+      }
       return
     }
 
@@ -82,6 +90,10 @@ export async function streamChatMessage(request: ChatRequest, { idempotencyKey, 
 
     if (next.status) {
       onStatus?.(next.status)
+    }
+
+    if (next.conversationId) {
+      onConversationId?.(next.conversationId)
     }
 
     if (next.content !== content) {
