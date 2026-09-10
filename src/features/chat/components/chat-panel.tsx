@@ -1,19 +1,11 @@
 "use client";
 
-import { type KeyboardEvent, type SubmitEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, type SubmitEvent, useEffect, useRef, useState } from "react";
 import { ArrowDownIcon, ArrowUpIcon, LoaderCircle, MessageSquareDashed, PlusIcon, PaperclipIcon, ImageIcon, TelescopeIcon, GlobeIcon, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import {
-  MessageScroller,
-  MessageScrollerButton,
-  MessageScrollerContent,
-  MessageScrollerItem,
-  MessageScrollerProvider,
-  MessageScrollerViewport,
-  useMessageScrollerScrollable,
-} from "@/components/ui/message-scroller";
+import { MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerItem, MessageScrollerProvider, MessageScrollerViewport } from "@/components/ui/message-scroller";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth/auth-context";
 import { streamChatMessage } from "@/features/chat/chat-api";
@@ -22,8 +14,6 @@ import { ConversationTitle } from "@/features/chat/components/conversation-title
 import { getConversation, listConversations, toChatMessages, updateConversationTitle } from "@/features/chat/conversation-api";
 import type { ChatMessage } from "@/features/chat/types";
 import { cn } from "@/lib/utils";
-
-const pageSize = 10;
 
 function ChatEmptyState({ title, description }: { title: string; description: string }) {
   return (
@@ -51,25 +41,9 @@ function getTimeOfDayGreeting() {
   return "Evening";
 }
 
-function OlderMessagesTrigger({ hasMore, visibleCount, onLoadMore }: { hasMore: boolean; visibleCount: number; onLoadMore: () => void }) {
-  const { start } = useMessageScrollerScrollable();
-  const atTop = !start;
-
-  useEffect(() => {
-    if (!hasMore || !atTop) {
-      return;
-    }
-
-    onLoadMore();
-  }, [atTop, hasMore, visibleCount, onLoadMore]);
-
-  return null;
-}
-
 export function ChatPanel() {
   const { isAuthenticated, user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [visibleCount, setVisibleCount] = useState(pageSize);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationTitle, setConversationTitle] = useState("");
   const [input, setInput] = useState("");
@@ -108,7 +82,6 @@ export function ChatPanel() {
           setConversationId(null);
           setConversationTitle("");
           setMessages([]);
-          setVisibleCount(pageSize);
           return;
         }
 
@@ -121,7 +94,6 @@ export function ChatPanel() {
         setConversationId(detail.id);
         setConversationTitle(detail.title);
         setMessages(toChatMessages(detail.id, detail.messages));
-        setVisibleCount(pageSize);
       } catch (requestError) {
         if (controller.signal.aborted) {
           return;
@@ -142,10 +114,6 @@ export function ChatPanel() {
       abortRef.current?.abort();
     };
   }, [isAuthenticated]);
-
-  const loadOlderMessages = useCallback(() => {
-    setVisibleCount((current) => Math.min(current + pageSize, messages.length));
-  }, [messages.length]);
 
   function handleStopStreaming() {
     abortRef.current?.abort();
@@ -186,7 +154,6 @@ export function ChatPanel() {
     };
 
     setMessages((current) => [...current, userMessage, assistantMessage]);
-    setVisibleCount((current) => current + 2);
     setInput("");
     setError("");
     setIsSending(true);
@@ -260,8 +227,6 @@ export function ChatPanel() {
   }
 
   const sessionMessages = isAuthenticated ? messages : [];
-  const displayedMessages = sessionMessages.slice(Math.max(0, sessionMessages.length - visibleCount));
-  const hasOlderMessages = isAuthenticated && visibleCount < sessionMessages.length;
   const showHydrating = isAuthenticated && isHydrating;
 
   return (
@@ -279,20 +244,20 @@ export function ChatPanel() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <MessageScrollerProvider autoScroll defaultScrollPosition="end">
             <MessageScroller className="min-h-0 flex-1 overflow-hidden">
-              <MessageScrollerViewport aria-label="Conversation" preserveScrollOnPrepend>
+              <MessageScrollerViewport aria-label="Conversation">
                 <MessageScrollerContent aria-busy={showHydrating || (isAuthenticated && isSending)} className="flex min-h-full w-full flex-col px-3 py-4">
                   {showHydrating ? (
                     <div className="flex flex-1 items-center justify-center" role="status">
                       <LoaderCircle aria-hidden="true" className="size-5 animate-spin text-muted-foreground" />
                       <span className="sr-only">Loading conversation</span>
                     </div>
-                  ) : displayedMessages.length === 0 ? (
+                  ) : sessionMessages.length === 0 ? (
                     <ChatEmptyState
                       title={isAuthenticated && user ? `${getTimeOfDayGreeting()}, ${user.name}!` : "Please log in to start a conversation."}
                       description={isAuthenticated ? "What are we working on today? Press send to start a new conversation" : "Log in first, then press send to start a new conversation"}
                     />
                   ) : (
-                    displayedMessages.map((message) => {
+                    sessionMessages.map((message) => {
                       const isUser = message.role === "user";
                       const status = !isUser && isSending ? message.status : undefined;
                       const isWaiting = !isUser && !message.content && isSending;
@@ -320,7 +285,6 @@ export function ChatPanel() {
                   )}
                 </MessageScrollerContent>
               </MessageScrollerViewport>
-              {hasOlderMessages ? <OlderMessagesTrigger hasMore={hasOlderMessages} visibleCount={visibleCount} onLoadMore={loadOlderMessages} /> : null}
               <MessageScrollerButton>
                 <ArrowDownIcon aria-hidden="true" />
                 <span className="sr-only">Jump to latest message</span>
