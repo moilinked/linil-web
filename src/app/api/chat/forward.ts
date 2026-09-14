@@ -19,7 +19,7 @@ export type ChatBackendRequest =
 
 export async function createChatBackendRequest(
   request: Request,
-  pathname: "/api/chat" | "/api/chat/stream",
+  pathname: "/api/chat/stream",
 ): Promise<ChatBackendRequest> {
   const apiBaseURL = getApiUrl()
   if (!apiBaseURL) {

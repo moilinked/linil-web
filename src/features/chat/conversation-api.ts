@@ -48,6 +48,25 @@ export async function getConversation(id: string, signal?: AbortSignal) {
   return payload
 }
 
+export async function clearConversationMessages(id: string, signal?: AbortSignal) {
+  const response = await fetch(`/api/conversations/${encodeURIComponent(id)}/messages`, {
+    method: "DELETE",
+    cache: "no-store",
+    signal,
+  })
+
+  if (!response.ok) {
+    await readError(response, "Failed to clear conversation")
+  }
+
+  const payload = (await response.json().catch(() => null)) as ConversationDetail | null
+  if (!payload || typeof payload.id !== "string") {
+    throw new Error("The conversation service returned an invalid response")
+  }
+
+  return payload
+}
+
 export async function updateConversationTitle(id: string, title: string, signal?: AbortSignal) {
   const response = await fetch(`/api/conversations/${encodeURIComponent(id)}`, {
     method: "PATCH",

@@ -4,17 +4,26 @@ import { type KeyboardEvent, type SubmitEvent, useEffect, useRef, useState } fro
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  Eraser,
+  GlobeIcon,
+  ImageIcon,
   LoaderCircle,
   MessageSquareDashed,
-  PlusIcon,
   PaperclipIcon,
-  ImageIcon,
-  TelescopeIcon,
-  GlobeIcon,
+  PlusIcon,
   Square,
+  TelescopeIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +46,7 @@ import { CHAT_RELOAD_EVENT } from "@/features/chat/chat-reload"
 import { ChatMarkdown } from "@/features/chat/components/chat-markdown"
 import { ConversationTitle } from "@/features/chat/components/conversation-title"
 import {
+  clearConversationMessages,
   getConversation,
   listConversations,
   toChatMessages,
@@ -80,9 +90,12 @@ export function ChatPanel() {
   const [error, setError] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [isHydrating, setIsHydrating] = useState(isAuthenticated)
+  const [isClearing, setIsClearing] = useState(false)
+  const [isClearOpen, setIsClearOpen] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
   const conversationIdRef = useRef<string | null>(null)
+  const mutationEpochRef = useRef(0)
 
   useEffect(() => {
     conversationIdRef.current = conversationId
@@ -176,10 +189,48 @@ export function ChatPanel() {
     setConversationTitle(summary.title)
   }
 
+  async function handleClearConversation() {
+    const id = conversationIdRef.current
+    if (!id || isClearing) {
+      return
+    }
+
+    mutationEpochRef.current += 1
+    const epoch = mutationEpochRef.current
+    abortRef.current?.abort()
+    abortRef.current = null
+    setIsSending(false)
+    setIsClearing(true)
+    setError("")
+
+    try {
+      const detail = await clearConversationMessages(id)
+      if (mutationEpochRef.current !== epoch) {
+        return
+      }
+
+      conversationIdRef.current = detail.id
+      setConversationId(detail.id)
+      setConversationTitle(detail.title)
+      setMessages(toChatMessages(detail.id, detail.messages))
+      setIsClearOpen(false)
+    } catch (requestError) {
+      if (mutationEpochRef.current !== epoch) {
+        return
+      }
+
+      setError(requestError instanceof Error ? requestError.message : "Failed to clear conversation")
+    } finally {
+      if (mutationEpochRef.current === epoch) {
+        setIsClearing(false)
+      }
+    }
+  }
+
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!isAuthenticated || isHydrating) {
+    if (!isAuthenticated || isHydrating || isClearing) {
       return
     }
 
@@ -199,6 +250,7 @@ export function ChatPanel() {
       role: "assistant",
       content: "",
     }
+    const submitEpoch = mutationEpochRef.current
 
     setMessages((current) => [...current, userMessage, assistantMessage])
     setInput("")
@@ -219,6 +271,10 @@ export function ChatPanel() {
           idempotencyKey: userMessage.id,
           signal: controller.signal,
           onText(nextContent) {
+            if (mutationEpochRef.current !== submitEpoch) {
+              return
+            }
+
             setMessages((current) =>
               current.map((message) =>
                 message.id === assistantMessage.id
@@ -228,6 +284,10 @@ export function ChatPanel() {
             )
           },
           onStatus(status) {
+            if (mutationEpochRef.current !== submitEpoch) {
+              return
+            }
+
             setMessages((current) =>
               current.map((message) =>
                 message.id === assistantMessage.id && !message.content ? { ...message, status } : message,
@@ -235,6 +295,10 @@ export function ChatPanel() {
             )
           },
           onConversationId(nextConversationId) {
+            if (mutationEpochRef.current !== submitEpoch) {
+              return
+            }
+
             conversationIdRef.current = nextConversationId
             setConversationId(nextConversationId)
             setConversationTitle((current) => current || content.slice(0, 40))
@@ -242,6 +306,10 @@ export function ChatPanel() {
         },
       )
     } catch (requestError) {
+      if (mutationEpochRef.current !== submitEpoch) {
+        return
+      }
+
       if (controller.signal.aborted) {
         setMessages((current) => {
           const assistant = current.find((message) => message.id === assistantMessage.id)
@@ -264,6 +332,10 @@ export function ChatPanel() {
         return current.filter((message) => message.id !== assistantMessage.id)
       })
     } finally {
+      if (mutationEpochRef.current !== submitEpoch) {
+        return
+      }
+
       if (abortRef.current === controller) {
         abortRef.current = null
         setIsSending(false)
@@ -275,7 +347,7 @@ export function ChatPanel() {
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (!isAuthenticated || isHydrating || isSending) {
+    if (!isAuthenticated || isHydrating || isSending || isClearing) {
       return
     }
 
@@ -287,17 +359,36 @@ export function ChatPanel() {
 
   const sessionMessages = isAuthenticated ? messages : []
   const showHydrating = isAuthenticated && isHydrating && sessionMessages.length === 0
+  const canClearConversation =
+    isAuthenticated && Boolean(conversationId) && !isHydrating && (sessionMessages.length > 0 || isSending)
 
   return (
     <section className="flex h-full min-h-0 flex-1 overflow-hidden px-4 pb-8 sm:px-6">
       <div className="mx-auto flex h-full min-h-0 w-full max-w-[870px] flex-1 flex-col overflow-hidden rounded-[24px] border border-white/60 bg-white/40 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.04)] backdrop-blur-[12px] transition-shadow focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.08)] sm:p-[25px]">
-        <div className="flex shrink-0 items-center border-b border-border/60 px-3 py-2">
-          <ConversationTitle
-            title={isAuthenticated ? conversationTitle : ""}
-            canEdit={isAuthenticated && Boolean(conversationId)}
-            disabled={isHydrating}
-            onSave={handleRename}
-          />
+        <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-2">
+          <div className="min-w-0 flex-1">
+            <ConversationTitle
+              title={isAuthenticated ? conversationTitle : ""}
+              canEdit={isAuthenticated && Boolean(conversationId)}
+              disabled={isHydrating || isClearing}
+              onSave={handleRename}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Clear conversation"
+            className="size-8 shrink-0 rounded-full"
+            disabled={!canClearConversation || isClearing}
+            onClick={() => setIsClearOpen(true)}
+          >
+            {isClearing ? (
+              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+            ) : (
+              <Eraser aria-hidden="true" className="size-4" />
+            )}
+          </Button>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -327,7 +418,9 @@ export function ChatPanel() {
                       }
                       description={
                         isAuthenticated
-                          ? "What are we working on today? Press send to start a new conversation"
+                          ? conversationId
+                            ? "Context is cleared. Send a message to continue this conversation"
+                            : "What are we working on today? Press send to start a new conversation"
                           : "Log in first, then press send to start a new conversation"
                       }
                     />
@@ -382,7 +475,7 @@ export function ChatPanel() {
               aria-label="Chat message"
               rows={1}
               className="max-h-40 min-h-12 resize-none border-0 bg-transparent px-0 py-1 text-base leading-6 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:bg-transparent disabled:opacity-70"
-              disabled={!isAuthenticated || isHydrating}
+              disabled={!isAuthenticated || isHydrating || isClearing}
             />
             <div className="mt-2 flex items-center justify-between">
               <DropdownMenu>
@@ -394,7 +487,7 @@ export function ChatPanel() {
                       variant="outline"
                       aria-label="Add files"
                       className="size-8 rounded-full border-border bg-background"
-                      disabled={!isAuthenticated || isSending || isHydrating}
+                      disabled={!isAuthenticated || isSending || isHydrating || isClearing}
                     />
                   }
                 >
@@ -436,7 +529,7 @@ export function ChatPanel() {
                   size="icon"
                   aria-label="Send message"
                   className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90"
-                  disabled={!isAuthenticated || isHydrating || !input.trim()}
+                  disabled={!isAuthenticated || isHydrating || isClearing || !input.trim()}
                 >
                   <ArrowUpIcon aria-hidden="true" className="size-4" />
                 </Button>
@@ -451,6 +544,39 @@ export function ChatPanel() {
           </p>
         ) : null}
       </div>
+
+      <Dialog
+        open={isClearOpen}
+        onOpenChange={(open) => {
+          if (isClearing) {
+            return
+          }
+
+          setIsClearOpen(open)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear conversation</DialogTitle>
+            <DialogDescription>
+              Messages and context will be removed. This conversation stays, and the next message continues here.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={isClearing} onClick={() => setIsClearOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isClearing}
+              onClick={() => void handleClearConversation()}
+            >
+              {isClearing ? "Clearing…" : "Clear"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }
