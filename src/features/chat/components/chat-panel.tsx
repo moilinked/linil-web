@@ -9,6 +9,7 @@ import { MessageScroller, MessageScrollerButton, MessageScrollerContent, Message
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/features/auth/auth-context";
 import { streamChatMessage } from "@/features/chat/chat-api";
+import { CHAT_RELOAD_EVENT } from "@/features/chat/chat-reload";
 import { ChatMarkdown } from "@/features/chat/components/chat-markdown";
 import { ConversationTitle } from "@/features/chat/components/conversation-title";
 import { getConversation, listConversations, toChatMessages, updateConversationTitle } from "@/features/chat/conversation-api";
@@ -50,6 +51,7 @@ export function ChatPanel() {
   const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isHydrating, setIsHydrating] = useState(isAuthenticated);
+  const [reloadToken, setReloadToken] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const conversationIdRef = useRef<string | null>(null);
 
@@ -67,6 +69,9 @@ export function ChatPanel() {
     const controller = new AbortController();
 
     async function loadLatestConversation() {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setIsSending(false);
       setIsHydrating(true);
       setError("");
 
@@ -113,7 +118,20 @@ export function ChatPanel() {
       controller.abort();
       abortRef.current?.abort();
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, reloadToken]);
+
+  useEffect(() => {
+    function handleReload() {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setReloadToken((current) => current + 1);
+    }
+
+    window.addEventListener(CHAT_RELOAD_EVENT, handleReload);
+    return () => {
+      window.removeEventListener(CHAT_RELOAD_EVENT, handleReload);
+    };
+  }, []);
 
   function handleStopStreaming() {
     abortRef.current?.abort();
@@ -227,18 +245,13 @@ export function ChatPanel() {
   }
 
   const sessionMessages = isAuthenticated ? messages : [];
-  const showHydrating = isAuthenticated && isHydrating;
+  const showHydrating = isAuthenticated && isHydrating && sessionMessages.length === 0;
 
   return (
     <section className="flex h-full min-h-0 flex-1 overflow-hidden px-4 pb-8 sm:px-6">
       <div className="mx-auto flex h-full min-h-0 w-full max-w-[870px] flex-1 flex-col overflow-hidden rounded-[24px] border border-white/60 bg-white/40 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.04)] backdrop-blur-[12px] transition-shadow focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.08)] sm:p-[25px]">
-        <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-3 py-2">
-          <ConversationTitle
-            title={isAuthenticated ? conversationTitle : ""}
-            canEdit={isAuthenticated && Boolean(conversationId)}
-            disabled={isHydrating}
-            onSave={handleRename}
-          />
+        <div className="flex shrink-0 items-center border-b border-border/60 px-3 py-2">
+          <ConversationTitle title={isAuthenticated ? conversationTitle : ""} canEdit={isAuthenticated && Boolean(conversationId)} disabled={isHydrating} onSave={handleRename} />
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -251,6 +264,8 @@ export function ChatPanel() {
                       <LoaderCircle aria-hidden="true" className="size-5 animate-spin text-muted-foreground" />
                       <span className="sr-only">Loading conversation</span>
                     </div>
+                  ) : sessionMessages.length === 0 && error ? (
+                    <ChatEmptyState title="Couldn't reach the chat service" description="The backend may be offline. Please try again in a moment." />
                   ) : sessionMessages.length === 0 ? (
                     <ChatEmptyState
                       title={isAuthenticated && user ? `${getTimeOfDayGreeting()}, ${user.name}!` : "Please log in to start a conversation."}
