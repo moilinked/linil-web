@@ -1,0 +1,70 @@
+# Dependencies (installed inside Docker)
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js / build outputs
+.next/
+out/
+dist/
+build/
+.vercel/
+
+# Tests
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Local development and editor files
+.git/
+.gitignore
+.gitattributes
+.vscode/
+.idea/
+*.log
+
+# Environment files. API_URL is injected at runtime by compose.
+.env
+.env.*
+!.env.example
+
+# Docker packaging files (not needed in the image)
+Dockerfile*
+.dockerignore
+compose.yaml
+compose.yml
+docker-compose*.yaml
+docker-compose*.yml
+scripts/docker-*.ps1
+scripts/docker-*.sh
+
+# Documentation
+*.md
+docs/
+AGENTS.md
+CLAUDE.md
+
+# CI / editor / AI metadata
+.github/
+.cursor/
+.agents/
+
+# Caches and temp
+.cache/
+.eslintcache/
+.swc/
+.turbo/
+.tmp/
+.temp/
+
+# TypeScript build metadata
+*.tsbuildinfo
+
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini

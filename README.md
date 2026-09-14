@@ -63,6 +63,34 @@ src/
 - `components/content`：Notes 与 Works 可复用的内容展示组件。
 - `config`：站点名称、导航等静态配置。
 
+## Docker 部署
+
+构建机打包镜像并打成 zip，上传到服务器后 `docker load` + `compose up`：
+
+```powershell
+pnpm docker:pack
+```
+
+Linux / macOS 可用 `bash scripts/docker-pack.sh`。产物在 `dist/chat-agent-web-<version>-<timestamp>.zip`。
+
+服务器：
+
+```bash
+unzip chat-agent-web-*.zip
+# 可选：cp env.example .env 后修改 API_URL
+bash load-and-up.sh
+```
+
+`load-and-up.sh` 会执行 `docker load` 和 `compose up -d`。先启动 `../chat-agent` 的 compose，再启动本项目。
+
+后端容器名为 `chat-agent`，端口 `9998` 只绑在宿主机 `127.0.0.1`（给 Nginx 用）。前端加入后端默认网络 `chat-agent_default`，在容器里用服务名调用：
+
+```dotenv
+API_URL=http://chat-agent:9998
+```
+
+调用链：`浏览器 / Nginx → 127.0.0.1:3030 前端容器 → chat-agent:9998 后端容器`。不要写 `localhost:9998` 或 `host.docker.internal:9998`（后者打到宿主机网卡，进不去只绑 loopback 的 9998）。
+
 ## 验证
 
 ```powershell

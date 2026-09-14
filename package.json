@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "docker:pack": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/docker-pack.ps1"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

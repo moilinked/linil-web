@@ -1,0 +1,30 @@
+name: chat-agent-web
+
+services:
+  chat-agent-web:
+    image: chat-agent-web:${IMAGE_TAG:-latest}
+    container_name: chat-agent-web
+    restart: unless-stopped
+    init: true
+    ports:
+      - "127.0.0.1:${PORT:-3030}:3030"
+    environment:
+      NODE_ENV: production
+      PORT: "3030"
+      HOSTNAME: 0.0.0.0
+      TZ: Asia/Shanghai
+      API_URL: ${API_URL:-http://chat-agent:9998}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - chat-agent
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+networks:
+  chat-agent:
+    name: ${CHAT_AGENT_NETWORK:-chat-agent_default}
+    external: true
