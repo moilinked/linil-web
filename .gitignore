@@ -21,6 +21,11 @@
 /build
 /dist
 
+# Docker pack artifacts (root-level save/zip as well as dist/)
+*.tar
+*.tar.gz
+*.zip
+
 # misc
 .DS_Store
 *.pem
