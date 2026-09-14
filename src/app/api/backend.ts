@@ -9,7 +9,11 @@ interface ProxyAuthenticatedRequestInit {
   headers?: Record<string, string>
 }
 
-export async function proxyAuthenticatedRequest(request: Request, pathname: string, init?: ProxyAuthenticatedRequestInit) {
+export async function proxyAuthenticatedRequest(
+  request: Request,
+  pathname: string,
+  init?: ProxyAuthenticatedRequestInit,
+) {
   const apiBaseURL = getApiUrl()
   if (!apiBaseURL) {
     return NextResponse.json({ error: "The server is missing the API_URL configuration" }, { status: 500 })

@@ -28,9 +28,7 @@ export function LoginPageContent({ nextPath }: LoginPageContentProps) {
     <div className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-4 py-16 sm:px-6">
       <section className="w-full max-w-sm rounded-[24px] border border-white/60 bg-white/40 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)] backdrop-blur-[12px]">
         <h1 className="text-xl font-semibold tracking-tight">Login</h1>
-        <p className="mt-2 mb-6 text-sm text-muted-foreground">
-          Log in to start a conversation with Chat Agent.
-        </p>
+        <p className="mt-2 mb-6 text-sm text-muted-foreground">Log in to start a conversation with Chat Agent.</p>
         <LoginForm onSuccess={handleSuccess} />
       </section>
     </div>

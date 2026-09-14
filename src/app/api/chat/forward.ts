@@ -17,7 +17,10 @@ export type ChatBackendRequest =
       body: ChatRequest
     }
 
-export async function createChatBackendRequest(request: Request, pathname: "/api/chat" | "/api/chat/stream"): Promise<ChatBackendRequest> {
+export async function createChatBackendRequest(
+  request: Request,
+  pathname: "/api/chat" | "/api/chat/stream",
+): Promise<ChatBackendRequest> {
   const apiBaseURL = getApiUrl()
   if (!apiBaseURL) {
     return { error: NextResponse.json({ error: "The server is missing the API_URL configuration" }, { status: 500 }) }

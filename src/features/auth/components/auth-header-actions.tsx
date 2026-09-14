@@ -33,7 +33,7 @@ export function AuthHeaderActions() {
     return (
       <Link
         href="/login"
-        className="rounded-full px-3 py-2 text-base font-medium text-foreground outline-none transition-opacity hover:opacity-70 focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="rounded-full px-3 py-2 text-base font-medium text-foreground transition-opacity outline-none hover:opacity-70 focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         Login
       </Link>
@@ -58,7 +58,7 @@ export function AuthHeaderActions() {
           <button
             type="button"
             aria-label={user.name}
-            className="inline-flex rounded-full outline-none transition-opacity hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="inline-flex rounded-full transition-opacity outline-none hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         }
       >

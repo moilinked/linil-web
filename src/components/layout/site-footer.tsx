@@ -8,7 +8,7 @@ export function SiteFooter() {
           href={siteConfig.beian.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
         >
           {siteConfig.beian.number}
         </a>

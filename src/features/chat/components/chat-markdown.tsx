@@ -40,7 +40,9 @@ export function ChatMarkdown({ content, className }: ChatMarkdownProps) {
             </a>
           ),
           pre: ({ children }) => (
-            <pre className="my-3 overflow-x-auto rounded-xl bg-muted p-3 font-mono text-[13px] leading-5">{children}</pre>
+            <pre className="my-3 overflow-x-auto rounded-xl bg-muted p-3 font-mono text-[13px] leading-5">
+              {children}
+            </pre>
           ),
           code: ({ className, children, ...props }) => {
             if (className) {

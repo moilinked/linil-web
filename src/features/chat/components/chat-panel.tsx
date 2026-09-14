@@ -1,20 +1,49 @@
-"use client";
+"use client"
 
-import { type KeyboardEvent, type SubmitEvent, useEffect, useRef, useState } from "react";
-import { ArrowDownIcon, ArrowUpIcon, LoaderCircle, MessageSquareDashed, PlusIcon, PaperclipIcon, ImageIcon, TelescopeIcon, GlobeIcon, Square } from "lucide-react";
+import { type KeyboardEvent, type SubmitEvent, useEffect, useRef, useState } from "react"
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  LoaderCircle,
+  MessageSquareDashed,
+  PlusIcon,
+  PaperclipIcon,
+  ImageIcon,
+  TelescopeIcon,
+  GlobeIcon,
+  Square,
+} from "lucide-react"
 
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerItem, MessageScrollerProvider, MessageScrollerViewport } from "@/components/ui/message-scroller";
-import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/features/auth/auth-context";
-import { streamChatMessage } from "@/features/chat/chat-api";
-import { CHAT_RELOAD_EVENT } from "@/features/chat/chat-reload";
-import { ChatMarkdown } from "@/features/chat/components/chat-markdown";
-import { ConversationTitle } from "@/features/chat/components/conversation-title";
-import { getConversation, listConversations, toChatMessages, updateConversationTitle } from "@/features/chat/conversation-api";
-import type { ChatMessage } from "@/features/chat/types";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@/components/ui/message-scroller"
+import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/features/auth/auth-context"
+import { streamChatMessage } from "@/features/chat/chat-api"
+import { CHAT_RELOAD_EVENT } from "@/features/chat/chat-reload"
+import { ChatMarkdown } from "@/features/chat/components/chat-markdown"
+import { ConversationTitle } from "@/features/chat/components/conversation-title"
+import {
+  getConversation,
+  listConversations,
+  toChatMessages,
+  updateConversationTitle,
+} from "@/features/chat/conversation-api"
+import type { ChatMessage } from "@/features/chat/types"
+import { cn } from "@/lib/utils"
 
 function ChatEmptyState({ title, description }: { title: string; description: string }) {
   return (
@@ -25,160 +54,160 @@ function ChatEmptyState({ title, description }: { title: string; description: st
       <h2 className="mt-4 text-xl font-semibold tracking-tight">{title}</h2>
       <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">{description}</p>
     </div>
-  );
+  )
 }
 
 function getTimeOfDayGreeting() {
-  const hour = new Date().getHours();
+  const hour = new Date().getHours()
 
   if (hour < 12) {
-    return "Morning";
+    return "Morning"
   }
 
   if (hour < 18) {
-    return "Afternoon";
+    return "Afternoon"
   }
 
-  return "Evening";
+  return "Evening"
 }
 
 export function ChatPanel() {
-  const { isAuthenticated, user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [conversationTitle, setConversationTitle] = useState("");
-  const [input, setInput] = useState("");
-  const [error, setError] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [isHydrating, setIsHydrating] = useState(isAuthenticated);
-  const [reloadToken, setReloadToken] = useState(0);
-  const abortRef = useRef<AbortController | null>(null);
-  const conversationIdRef = useRef<string | null>(null);
+  const { isAuthenticated, user } = useAuth()
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [conversationTitle, setConversationTitle] = useState("")
+  const [input, setInput] = useState("")
+  const [error, setError] = useState("")
+  const [isSending, setIsSending] = useState(false)
+  const [isHydrating, setIsHydrating] = useState(isAuthenticated)
+  const [reloadToken, setReloadToken] = useState(0)
+  const abortRef = useRef<AbortController | null>(null)
+  const conversationIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    conversationIdRef.current = conversationId;
-  }, [conversationId]);
+    conversationIdRef.current = conversationId
+  }, [conversationId])
 
   useEffect(() => {
     if (!isAuthenticated) {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      return;
+      abortRef.current?.abort()
+      abortRef.current = null
+      return
     }
 
-    const controller = new AbortController();
+    const controller = new AbortController()
 
     async function loadLatestConversation() {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      setIsSending(false);
-      setIsHydrating(true);
-      setError("");
+      abortRef.current?.abort()
+      abortRef.current = null
+      setIsSending(false)
+      setIsHydrating(true)
+      setError("")
 
       try {
-        const conversations = await listConversations(controller.signal);
+        const conversations = await listConversations(controller.signal)
         if (controller.signal.aborted) {
-          return;
+          return
         }
 
-        const latest = conversations[0];
+        const latest = conversations[0]
         if (!latest) {
-          conversationIdRef.current = null;
-          setConversationId(null);
-          setConversationTitle("");
-          setMessages([]);
-          return;
+          conversationIdRef.current = null
+          setConversationId(null)
+          setConversationTitle("")
+          setMessages([])
+          return
         }
 
-        const detail = await getConversation(latest.id, controller.signal);
+        const detail = await getConversation(latest.id, controller.signal)
         if (controller.signal.aborted) {
-          return;
+          return
         }
 
-        conversationIdRef.current = detail.id;
-        setConversationId(detail.id);
-        setConversationTitle(detail.title);
-        setMessages(toChatMessages(detail.id, detail.messages));
+        conversationIdRef.current = detail.id
+        setConversationId(detail.id)
+        setConversationTitle(detail.title)
+        setMessages(toChatMessages(detail.id, detail.messages))
       } catch (requestError) {
         if (controller.signal.aborted) {
-          return;
+          return
         }
 
-        setError(requestError instanceof Error ? requestError.message : "Failed to load conversation");
+        setError(requestError instanceof Error ? requestError.message : "Failed to load conversation")
       } finally {
         if (!controller.signal.aborted) {
-          setIsHydrating(false);
+          setIsHydrating(false)
         }
       }
     }
 
-    void loadLatestConversation();
+    void loadLatestConversation()
 
     return () => {
-      controller.abort();
-      abortRef.current?.abort();
-    };
-  }, [isAuthenticated, reloadToken]);
+      controller.abort()
+      abortRef.current?.abort()
+    }
+  }, [isAuthenticated, reloadToken])
 
   useEffect(() => {
     function handleReload() {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      setReloadToken((current) => current + 1);
+      abortRef.current?.abort()
+      abortRef.current = null
+      setReloadToken((current) => current + 1)
     }
 
-    window.addEventListener(CHAT_RELOAD_EVENT, handleReload);
+    window.addEventListener(CHAT_RELOAD_EVENT, handleReload)
     return () => {
-      window.removeEventListener(CHAT_RELOAD_EVENT, handleReload);
-    };
-  }, []);
+      window.removeEventListener(CHAT_RELOAD_EVENT, handleReload)
+    }
+  }, [])
 
   function handleStopStreaming() {
-    abortRef.current?.abort();
+    abortRef.current?.abort()
   }
 
   async function handleRename(nextTitle: string) {
-    const id = conversationIdRef.current;
+    const id = conversationIdRef.current
     if (!id) {
-      return;
+      return
     }
 
-    const summary = await updateConversationTitle(id, nextTitle);
-    setConversationTitle(summary.title);
+    const summary = await updateConversationTitle(id, nextTitle)
+    setConversationTitle(summary.title)
   }
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
+    event.preventDefault()
 
     if (!isAuthenticated || isHydrating) {
-      return;
+      return
     }
 
-    const content = input.trim();
+    const content = input.trim()
     if (!content || isSending) {
-      return;
+      return
     }
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
       content,
-    };
+    }
 
     const assistantMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "assistant",
       content: "",
-    };
+    }
 
-    setMessages((current) => [...current, userMessage, assistantMessage]);
-    setInput("");
-    setError("");
-    setIsSending(true);
+    setMessages((current) => [...current, userMessage, assistantMessage])
+    setInput("")
+    setError("")
+    setIsSending(true)
 
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
 
     try {
       await streamChatMessage(
@@ -190,98 +219,131 @@ export function ChatPanel() {
           idempotencyKey: userMessage.id,
           signal: controller.signal,
           onText(nextContent) {
-            setMessages((current) => current.map((message) => (message.id === assistantMessage.id ? { ...message, content: nextContent, status: nextContent ? undefined : message.status } : message)));
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantMessage.id
+                  ? { ...message, content: nextContent, status: nextContent ? undefined : message.status }
+                  : message,
+              ),
+            )
           },
           onStatus(status) {
-            setMessages((current) => current.map((message) => (message.id === assistantMessage.id && !message.content ? { ...message, status } : message)));
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantMessage.id && !message.content ? { ...message, status } : message,
+              ),
+            )
           },
           onConversationId(nextConversationId) {
-            conversationIdRef.current = nextConversationId;
-            setConversationId(nextConversationId);
-            setConversationTitle((current) => current || content.slice(0, 40));
+            conversationIdRef.current = nextConversationId
+            setConversationId(nextConversationId)
+            setConversationTitle((current) => current || content.slice(0, 40))
           },
         },
-      );
+      )
     } catch (requestError) {
       if (controller.signal.aborted) {
         setMessages((current) => {
-          const assistant = current.find((message) => message.id === assistantMessage.id);
+          const assistant = current.find((message) => message.id === assistantMessage.id)
           if (assistant?.content) {
-            return current;
+            return current
           }
 
-          return current.filter((message) => message.id !== assistantMessage.id);
-        });
-        return;
+          return current.filter((message) => message.id !== assistantMessage.id)
+        })
+        return
       }
 
-      setError(requestError instanceof Error ? requestError.message : "Failed to send message");
+      setError(requestError instanceof Error ? requestError.message : "Failed to send message")
       setMessages((current) => {
-        const assistant = current.find((message) => message.id === assistantMessage.id);
+        const assistant = current.find((message) => message.id === assistantMessage.id)
         if (assistant?.content) {
-          return current;
+          return current
         }
 
-        return current.filter((message) => message.id !== assistantMessage.id);
-      });
+        return current.filter((message) => message.id !== assistantMessage.id)
+      })
     } finally {
       if (abortRef.current === controller) {
-        abortRef.current = null;
-        setIsSending(false);
-        setMessages((current) => current.map((message) => (message.id === assistantMessage.id ? { ...message, status: undefined } : message)));
+        abortRef.current = null
+        setIsSending(false)
+        setMessages((current) =>
+          current.map((message) => (message.id === assistantMessage.id ? { ...message, status: undefined } : message)),
+        )
       }
     }
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (!isAuthenticated || isHydrating || isSending) {
-      return;
+      return
     }
 
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-      event.preventDefault();
-      event.currentTarget.form?.requestSubmit();
+      event.preventDefault()
+      event.currentTarget.form?.requestSubmit()
     }
   }
 
-  const sessionMessages = isAuthenticated ? messages : [];
-  const showHydrating = isAuthenticated && isHydrating && sessionMessages.length === 0;
+  const sessionMessages = isAuthenticated ? messages : []
+  const showHydrating = isAuthenticated && isHydrating && sessionMessages.length === 0
 
   return (
     <section className="flex h-full min-h-0 flex-1 overflow-hidden px-4 pb-8 sm:px-6">
       <div className="mx-auto flex h-full min-h-0 w-full max-w-[870px] flex-1 flex-col overflow-hidden rounded-[24px] border border-white/60 bg-white/40 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.04)] backdrop-blur-[12px] transition-shadow focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.08)] sm:p-[25px]">
         <div className="flex shrink-0 items-center border-b border-border/60 px-3 py-2">
-          <ConversationTitle title={isAuthenticated ? conversationTitle : ""} canEdit={isAuthenticated && Boolean(conversationId)} disabled={isHydrating} onSave={handleRename} />
+          <ConversationTitle
+            title={isAuthenticated ? conversationTitle : ""}
+            canEdit={isAuthenticated && Boolean(conversationId)}
+            disabled={isHydrating}
+            onSave={handleRename}
+          />
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <MessageScrollerProvider autoScroll defaultScrollPosition="end">
             <MessageScroller className="min-h-0 flex-1 overflow-hidden">
               <MessageScrollerViewport aria-label="Conversation">
-                <MessageScrollerContent aria-busy={showHydrating || (isAuthenticated && isSending)} className="flex min-h-full w-full flex-col px-3 py-4">
+                <MessageScrollerContent
+                  aria-busy={showHydrating || (isAuthenticated && isSending)}
+                  className="flex min-h-full w-full flex-col px-3 py-4"
+                >
                   {showHydrating ? (
                     <div className="flex flex-1 items-center justify-center" role="status">
                       <LoaderCircle aria-hidden="true" className="size-5 animate-spin text-muted-foreground" />
                       <span className="sr-only">Loading conversation</span>
                     </div>
                   ) : sessionMessages.length === 0 && error ? (
-                    <ChatEmptyState title="Couldn't reach the chat service" description="The backend may be offline. Please try again in a moment." />
+                    <ChatEmptyState
+                      title="Couldn't reach the chat service"
+                      description="The backend may be offline. Please try again in a moment."
+                    />
                   ) : sessionMessages.length === 0 ? (
                     <ChatEmptyState
-                      title={isAuthenticated && user ? `${getTimeOfDayGreeting()}, ${user.name}!` : "Please log in to start a conversation."}
-                      description={isAuthenticated ? "What are we working on today? Press send to start a new conversation" : "Log in first, then press send to start a new conversation"}
+                      title={
+                        isAuthenticated && user
+                          ? `${getTimeOfDayGreeting()}, ${user.name}!`
+                          : "Please log in to start a conversation."
+                      }
+                      description={
+                        isAuthenticated
+                          ? "What are we working on today? Press send to start a new conversation"
+                          : "Log in first, then press send to start a new conversation"
+                      }
                     />
                   ) : (
                     sessionMessages.map((message) => {
-                      const isUser = message.role === "user";
-                      const status = !isUser && isSending ? message.status : undefined;
-                      const isWaiting = !isUser && !message.content && isSending;
+                      const isUser = message.role === "user"
+                      const status = !isUser && isSending ? message.status : undefined
+                      const isWaiting = !isUser && !message.content && isSending
 
                       return (
                         <MessageScrollerItem key={message.id} messageId={message.id} scrollAnchor={isUser}>
                           <article className={cn("flex items-start", isUser && "justify-end")}>
                             {isUser ? (
-                              <div className="max-w-[85%] rounded-[20px] bg-muted px-4 py-2.5 text-sm leading-6 whitespace-pre-wrap text-foreground">{message.content}</div>
+                              <div className="max-w-[85%] rounded-[20px] bg-muted px-4 py-2.5 text-sm leading-6 whitespace-pre-wrap text-foreground">
+                                {message.content}
+                              </div>
                             ) : (
                               <div className="flex max-w-[85%] flex-col gap-2">
                                 {isWaiting ? (
@@ -290,12 +352,14 @@ export function ChatPanel() {
                                     {status || "Thinking…"}
                                   </div>
                                 ) : null}
-                                {message.content ? <ChatMarkdown content={message.content} className="text-foreground" /> : null}
+                                {message.content ? (
+                                  <ChatMarkdown content={message.content} className="text-foreground" />
+                                ) : null}
                               </div>
                             )}
                           </article>
                         </MessageScrollerItem>
-                      );
+                      )
                     })
                   )}
                 </MessageScrollerContent>
@@ -357,7 +421,13 @@ export function ChatPanel() {
                 </DropdownMenuContent>
               </DropdownMenu>
               {isSending && isAuthenticated ? (
-                <Button type="button" size="icon" aria-label="Stop generating" className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90" onClick={handleStopStreaming}>
+                <Button
+                  type="button"
+                  size="icon"
+                  aria-label="Stop generating"
+                  className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90"
+                  onClick={handleStopStreaming}
+                >
                   <Square aria-hidden="true" className="size-3.5 fill-current" />
                 </Button>
               ) : (
@@ -382,5 +452,5 @@ export function ChatPanel() {
         ) : null}
       </div>
     </section>
-  );
+  )
 }

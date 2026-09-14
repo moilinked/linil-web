@@ -40,7 +40,10 @@ function getErrorMessage(payload: { error?: string } | null, fallback: string) {
   return payload && payload.error ? payload.error : fallback
 }
 
-export async function streamChatMessage(request: ChatRequest, { idempotencyKey, signal, onText, onStatus, onConversationId }: StreamChatMessageOptions) {
+export async function streamChatMessage(
+  request: ChatRequest,
+  { idempotencyKey, signal, onText, onStatus, onConversationId }: StreamChatMessageOptions,
+) {
   const body: ChatRequest = request.conversation_id
     ? { conversation_id: request.conversation_id, message: request.message }
     : { message: request.message }
@@ -67,7 +70,11 @@ export async function streamChatMessage(request: ChatRequest, { idempotencyKey, 
 
   const contentType = response.headers.get("Content-Type") || ""
   if (!contentType.includes("text/event-stream")) {
-    const payload = (await response.json().catch(() => null)) as { conversation_id?: string; message?: string; error?: string } | null
+    const payload = (await response.json().catch(() => null)) as {
+      conversation_id?: string
+      message?: string
+      error?: string
+    } | null
     if (payload && typeof payload.message === "string") {
       onText(payload.message)
       if (typeof payload.conversation_id === "string" && payload.conversation_id) {

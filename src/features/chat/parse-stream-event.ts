@@ -18,9 +18,18 @@ function asRecord(value: unknown) {
 }
 
 function normalizeKind(value: string) {
-  const name = value.trim().toLowerCase().replace(/[\s-]+/g, "_")
+  const name = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
 
-  if (name === "delta" || name === "text" || name === "text_delta" || name === "content_block_delta" || name === "message") {
+  if (
+    name === "delta" ||
+    name === "text" ||
+    name === "text_delta" ||
+    name === "content_block_delta" ||
+    name === "message"
+  ) {
     return "delta"
   }
   if (name === "done" || name === "complete" || name === "end" || name === "finished") {
@@ -143,7 +152,10 @@ function inferKind(eventName: string, parsed: Record<string, unknown> | null, tr
     return typed
   }
 
-  if (readToolName(parsed) && (parsed.arguments !== undefined || parsed.parameters !== undefined || parsed.input !== undefined)) {
+  if (
+    readToolName(parsed) &&
+    (parsed.arguments !== undefined || parsed.parameters !== undefined || parsed.input !== undefined)
+  ) {
     return "tool_call"
   }
 

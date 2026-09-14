@@ -31,7 +31,7 @@ export function SiteLogo() {
     <Link
       href="/chat"
       aria-label={`${siteConfig.name} Chat`}
-      className="w-fit rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="w-fit rounded-full transition-opacity outline-none hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50"
       onClick={handleClick}
     >
       <Image
