@@ -35,7 +35,12 @@ export function ChatMarkdown({ content, className }: ChatMarkdownProps) {
         remarkPlugins={[remarkGfm]}
         components={{
           a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline underline-offset-2 hover:text-primary-hover"
+            >
               {children}
             </a>
           ),

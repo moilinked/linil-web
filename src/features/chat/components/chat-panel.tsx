@@ -364,7 +364,7 @@ export function ChatPanel() {
 
   return (
     <section className="flex h-full min-h-0 flex-1 overflow-hidden px-4 pb-8 sm:px-6">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-[870px] flex-1 flex-col overflow-hidden rounded-[24px] border border-white/60 bg-white/40 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.04)] backdrop-blur-[12px] transition-shadow focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.08)] sm:p-[25px]">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[870px] flex-1 flex-col overflow-hidden rounded-[24px] border border-border bg-card/80 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-[12px] transition-shadow focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.4)] sm:p-[25px]">
         <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-2">
           <div className="min-w-0 flex-1">
             <ConversationTitle
@@ -379,7 +379,7 @@ export function ChatPanel() {
             variant="ghost"
             size="icon"
             aria-label="Clear conversation"
-            className="size-8 shrink-0 rounded-full"
+            className="size-8 shrink-0 cursor-pointer rounded-full"
             disabled={!canClearConversation || isClearing}
             onClick={() => setIsClearOpen(true)}
           >
@@ -434,7 +434,7 @@ export function ChatPanel() {
                         <MessageScrollerItem key={message.id} messageId={message.id} scrollAnchor={isUser}>
                           <article className={cn("flex items-start", isUser && "justify-end")}>
                             {isUser ? (
-                              <div className="max-w-[85%] rounded-[20px] bg-muted px-4 py-2.5 text-sm leading-6 whitespace-pre-wrap text-foreground">
+                              <div className="max-w-[85%] rounded-[20px] bg-primary px-4 py-2.5 text-sm leading-6 whitespace-pre-wrap text-primary-foreground">
                                 {message.content}
                               </div>
                             ) : (
@@ -518,7 +518,7 @@ export function ChatPanel() {
                   type="button"
                   size="icon"
                   aria-label="Stop generating"
-                  className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90"
+                  className="size-8 cursor-pointer rounded-full bg-primary text-primary-foreground hover:bg-primary-hover"
                   onClick={handleStopStreaming}
                 >
                   <Square aria-hidden="true" className="size-3.5 fill-current" />
@@ -528,7 +528,7 @@ export function ChatPanel() {
                   type="submit"
                   size="icon"
                   aria-label="Send message"
-                  className="size-8 rounded-full bg-[#155dfc] text-white hover:bg-[#155dfc]/90"
+                  className="size-8 cursor-pointer rounded-full bg-primary text-primary-foreground hover:bg-primary-hover"
                   disabled={!isAuthenticated || isHydrating || isClearing || !input.trim()}
                 >
                   <ArrowUpIcon aria-hidden="true" className="size-4" />

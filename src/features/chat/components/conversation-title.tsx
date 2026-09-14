@@ -1,6 +1,6 @@
 "use client"
 
-import { type KeyboardEvent, useEffect, useState } from "react"
+import { type KeyboardEvent, useState } from "react"
 
 import { Input } from "@/components/ui/input"
 import { conversationTitleMaxLength, normalizeConversationTitle } from "@/features/chat/types"
@@ -22,13 +22,6 @@ export function ConversationTitle({ title, canEdit, disabled, onSave }: Conversa
   const [draft, setDraft] = useState(title)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
-
-  useEffect(() => {
-    if (!editing) {
-      setDraft(title)
-      setError("")
-    }
-  }, [title, editing])
 
   async function commit() {
     if (saving || disabled) {
@@ -91,11 +84,13 @@ export function ConversationTitle({ title, canEdit, disabled, onSave }: Conversa
         className={cn("min-w-0 truncate font-semibold", canEdit && !disabled && "select-none")}
         onDoubleClick={() => {
           if (canEdit && !disabled) {
+            setDraft(title)
+            setError("")
             setEditing(true)
           }
         }}
       >
-        {title || "Chat"}
+        {title || "New Chat"}
       </h1>
     )
   }

@@ -21,7 +21,7 @@ export function SiteNavigation() {
             aria-current={isActive ? "page" : undefined}
             className={cn(
               "rounded-full px-2 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground sm:px-0 sm:text-base",
-              isActive && "font-bold text-[#ff5e3a] hover:text-[#ff5e3a]",
+              isActive && "font-bold text-primary hover:text-primary-hover",
             )}
           >
             {item.label}

@@ -27,12 +27,12 @@ export function ThemeToggle() {
     <Button
       type="button"
       variant="ghost"
-      size="icon-lg"
-      className="size-11 rounded-full"
+      size="icon"
+      className="size-8 cursor-pointer rounded-full"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
-      {isDark ? <Sun aria-hidden="true" className="size-5" /> : <Moon aria-hidden="true" className="size-5" />}
+      {isDark ? <Sun aria-hidden="true" className="size-4" /> : <Moon aria-hidden="true" className="size-4" />}
     </Button>
   )
 }
