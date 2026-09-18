@@ -4,7 +4,7 @@ import { ChatPanel } from "@/features/chat/components/chat-panel"
 
 export const metadata: Metadata = {
   title: "Chat",
-  description: "Chat with Chat Agent",
+  description: "Chat with me.",
 }
 
 export default function ChatPage() {
