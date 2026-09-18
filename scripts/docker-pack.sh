@@ -11,7 +11,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 IMAGE_NAME="chat-agent-web"
-IMAGE_TAG="$(node -p "require('./package.json').version")"
+IMAGE_TAG="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -n1)"
+IMAGE_TAG="${IMAGE_TAG:-latest}"
 FULL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
 LATEST_IMAGE="${IMAGE_NAME}:latest"
 STAMP="$(date +%Y%m%d-%H%M%S)"
@@ -24,8 +25,8 @@ mkdir -p "${ROOT}/dist"
 rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR"
 
-echo "docker build -t ${FULL_IMAGE} -t ${LATEST_IMAGE} ."
-docker build -t "$FULL_IMAGE" -t "$LATEST_IMAGE" .
+echo "docker build --load -t ${FULL_IMAGE} -t ${LATEST_IMAGE} ."
+docker build --load -t "$FULL_IMAGE" -t "$LATEST_IMAGE" .
 
 echo "docker save -o ${TAR_PATH} ${FULL_IMAGE} ${LATEST_IMAGE}"
 docker save -o "$TAR_PATH" "$FULL_IMAGE" "$LATEST_IMAGE"
@@ -33,6 +34,7 @@ docker save -o "$TAR_PATH" "$FULL_IMAGE" "$LATEST_IMAGE"
 cp "${ROOT}/docker-compose.yml" "${STAGE_DIR}/docker-compose.yml"
 cp "${ROOT}/.env.docker.example" "${STAGE_DIR}/env.example"
 cp "${ROOT}/scripts/docker-load-and-up.sh" "${STAGE_DIR}/load-and-up.sh"
+cp "$TAR_PATH" "${ROOT}/dist/${TAR_NAME}"
 
 rm -f "$ZIP_PATH"
 
@@ -46,4 +48,5 @@ else
 fi
 
 echo "packed: ${ZIP_PATH}"
-echo "upload the zip, unzip on the server, then: bash load-and-up.sh"
+echo "first deploy: upload the zip, unzip, then bash load-and-up.sh"
+echo "later deploy: upload dist/${TAR_NAME} over the server tar, then bash load-and-up.sh"

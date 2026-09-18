@@ -22,19 +22,6 @@ if [[ ! -f .env ]]; then
   echo "created .env from env.example"
 fi
 
-NETWORK_NAME="chat-agent_default"
-if [[ -f .env ]]; then
-  env_network="$(grep -E '^CHAT_AGENT_NETWORK=' .env | tail -n1 | cut -d= -f2- | tr -d '[:space:]' || true)"
-  if [[ -n "${env_network}" ]]; then
-    NETWORK_NAME="${env_network}"
-  fi
-fi
-
-if ! docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
-  echo "missing docker network ${NETWORK_NAME}; start ../chat-agent compose first" >&2
-  exit 1
-fi
-
 echo "docker load -i $IMAGE_TAR"
 docker load -i "$IMAGE_TAR"
 
@@ -49,6 +36,6 @@ compose() {
   fi
 }
 
-echo "docker compose up -d"
-compose up -d
+echo "docker compose up -d --force-recreate"
+compose up -d --force-recreate
 compose ps

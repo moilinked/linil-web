@@ -30,8 +30,8 @@ if (Test-Path $StageDir) {
 }
 New-Item -ItemType Directory -Force -Path $StageDir | Out-Null
 
-Write-Host "docker build -t $FullImage -t $LatestImage ."
-docker build -t $FullImage -t $LatestImage .
+Write-Host "docker build --load -t $FullImage -t $LatestImage ."
+docker build --load -t $FullImage -t $LatestImage .
 if ($LASTEXITCODE -ne 0) {
   throw "docker build failed"
 }
@@ -46,6 +46,9 @@ Copy-Item (Join-Path $Root "docker-compose.yml") (Join-Path $StageDir "docker-co
 Copy-Item (Join-Path $Root ".env.docker.example") (Join-Path $StageDir "env.example")
 Copy-Item (Join-Path $Root "scripts\docker-load-and-up.sh") (Join-Path $StageDir "load-and-up.sh")
 
+$UpdateTarPath = Join-Path $Root "dist\$TarName"
+Copy-Item $TarPath $UpdateTarPath -Force
+
 if (Test-Path $ZipPath) {
   Remove-Item -Force $ZipPath
 }
@@ -59,4 +62,5 @@ $ZipFiles = @(
 Compress-Archive -Path $ZipFiles -DestinationPath $ZipPath -CompressionLevel Optimal
 
 Write-Host "packed: $ZipPath"
-Write-Host "upload the zip, unzip on the server, then: bash load-and-up.sh"
+Write-Host "first deploy: upload the zip, unzip, then bash load-and-up.sh"
+Write-Host "later deploy: upload dist\$TarName over the server tar, then bash load-and-up.sh"

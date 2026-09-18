@@ -65,31 +65,45 @@ src/
 
 ## Docker 部署
 
-构建机打包镜像并打成 zip，上传到服务器后 `docker load` + `compose up`：
+本机打包：
 
 ```powershell
 pnpm docker:pack
 ```
 
-Linux / macOS 可用 `bash scripts/docker-pack.sh`。产物在 `dist/chat-agent-web-<version>-<timestamp>.zip`。
+### 第一次
 
-服务器：
+上传 `dist/chat-agent-web-<version>-<timestamp>.zip`，在服务器解压后：
 
 ```bash
-unzip chat-agent-web-*.zip
-# 可选：cp env.example .env 后修改 API_URL
+cp env.example .env
 bash load-and-up.sh
 ```
 
-`load-and-up.sh` 会执行 `docker load` 和 `compose up -d`。先启动 `../chat-agent` 的 compose，再启动本项目。
+`docker-compose.yml`、`.env` 留在服务器目录，以后不用再传。
 
-后端容器名为 `chat-agent`，端口 `9998` 只绑在宿主机 `127.0.0.1`（给 Nginx 用）。前端加入后端默认网络 `chat-agent_default`，在容器里用服务名调用：
+### 以后更新
+
+只上传 `dist/chat-agent-web.tar`，覆盖服务器上同名文件，然后在该目录：
+
+```bash
+docker load -i chat-agent-web.tar
+docker compose up -d --force-recreate
+```
+
+或直接 `bash load-and-up.sh`。
+
+前端可单独启动。后端容器名为 `chat-agent`，共用网络 `chat-agent_default`（前端 compose 会自行创建）。后端起来后若还不在该网络上：
+
+```bash
+docker network connect chat-agent_default chat-agent
+```
 
 ```dotenv
 API_URL=http://chat-agent:9998
 ```
 
-调用链：`浏览器 / Nginx → 127.0.0.1:3030 前端容器 → chat-agent:9998 后端容器`。不要写 `localhost:9998` 或 `host.docker.internal:9998`（后者打到宿主机网卡，进不去只绑 loopback 的 9998）。
+调用链：`浏览器 / Nginx → 127.0.0.1:3030 前端容器 → chat-agent:9998 后端容器`。
 
 ## 验证
 

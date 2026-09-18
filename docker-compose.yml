@@ -27,4 +27,3 @@ services:
 networks:
   chat-agent:
     name: ${CHAT_AGENT_NETWORK:-chat-agent_default}
-    external: true
