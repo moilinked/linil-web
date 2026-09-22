@@ -89,14 +89,7 @@ docker compose up -d --force-recreate
 
 或直接 `bash load-and-up.sh`。
 
-前端可单独启动。chat 容器名为 `chat-agent`，site 容器名为 `site`。前端 compose 会创建网络 `chat-agent_default` 和 `site_default`。后端起来后若还不在对应网络上：
-
-```bash
-docker network connect chat-agent_default chat-agent
-docker network connect site_default site
-```
-
-`CHAT_API_URL` 指向 chat 容器，`SITE_API_URL` 指向 site 容器，写在服务器上的 `.env` 里。
+网络 `backend-chat-agent` 里的容器是 `chat-agent`，网络 `backend-site` 里的容器是 `site`。`CHAT_API_URL` 和 `SITE_API_URL` 用容器名，`CHAT_AGENT_NETWORK` 和 `SITE_NETWORK` 用网络名。前端 compose 只加入这两张已有网络。
 
 调用链：`浏览器 / Nginx → 127.0.0.1:3030 前端容器 → chat 或 site 后端容器`。
 

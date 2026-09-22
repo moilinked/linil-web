@@ -15,10 +15,13 @@ const connectionErrors: Record<BackendService, string> = {
   site: "Unable to connect to the site backend",
 }
 
-export function resolveBackendUrl(service: BackendService, pathname: string) {
+type BackendUrlResult = { ok: true; url: URL } | { ok: false; error: NextResponse }
+
+export function resolveBackendUrl(service: BackendService, pathname: string): BackendUrlResult {
   const apiBaseURL = getBackendBaseUrl(service)
   if (!apiBaseURL) {
     return {
+      ok: false,
       error: NextResponse.json(
         { error: `The server is missing the ${backendConfigName(service)} configuration` },
         { status: 500 },
@@ -27,9 +30,10 @@ export function resolveBackendUrl(service: BackendService, pathname: string) {
   }
 
   try {
-    return { url: new URL(pathname, apiBaseURL) }
+    return { ok: true, url: new URL(pathname, apiBaseURL) }
   } catch {
     return {
+      ok: false,
       error: NextResponse.json(
         { error: `The ${backendConfigName(service)} configuration is invalid` },
         { status: 500 },
@@ -45,7 +49,7 @@ export async function proxyAuthenticatedRequest(
 ) {
   const service = init?.service ?? "chat"
   const resolved = resolveBackendUrl(service, pathname)
-  if ("error" in resolved) {
+  if (!resolved.ok) {
     return resolved.error
   }
 

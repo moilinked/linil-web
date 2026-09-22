@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   }
 
   const resolved = resolveBackendUrl("site", "/api/auth/login")
-  if ("error" in resolved) {
+  if (!resolved.ok) {
     return resolved.error
   }
   const backendURL = resolved.url

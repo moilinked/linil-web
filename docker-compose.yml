@@ -29,6 +29,8 @@ services:
 
 networks:
   chat-agent:
-    name: ${CHAT_AGENT_NETWORK:-chat-agent_default}
+    name: ${CHAT_AGENT_NETWORK:-backend-chat-agent}
+    external: true
   site:
-    name: ${SITE_NETWORK:-site_default}
+    name: ${SITE_NETWORK:-backend-site}
+    external: true

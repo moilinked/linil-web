@@ -51,7 +51,7 @@ export async function createChatBackendRequest(
   }
 
   const resolved = resolveBackendUrl("chat", pathname)
-  if ("error" in resolved) {
+  if (!resolved.ok) {
     return { error: resolved.error }
   }
   const backendURL = resolved.url
