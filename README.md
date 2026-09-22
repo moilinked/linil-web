@@ -22,15 +22,11 @@ pnpm dev
 
 访问 `http://localhost:3000`，根路径会跳转到 `/chat`。
 
-`pnpm dev` 会连接本地 Chat Agent：`http://localhost:9998`。请先启动该地址上的后端。
+`pnpm dev` 会连接两个本地后端：Chat Agent 负责对话，站点服务负责登录和账号。请先启动这两个后端。地址写在环境变量里，不在这里列出。
 
 ## 环境变量
 
-```dotenv
-API_URL=http://localhost:9998
-```
-
-该变量只在 Next.js 服务端读取。浏览器请求 `/api/chat`，由 Route Handler 转发到 Go 后端，避免暴露真实后端地址并减少跨域配置。
+`CHAT_API_URL` 指向 chat 后端，`SITE_API_URL` 指向 site 后端。具体地址放在 `.env.development` 或部署用的 `.env` 中，只在 Next.js 服务端读取。浏览器仍请求本站 `/api/*`，由 Route Handler 按路径转发：登录和账号走 site，对话和会话走 chat。这样不会把真实后端地址暴露给浏览器，也不需要为浏览器配置跨域。未设置 `CHAT_API_URL` 时仍兼容旧变量 `API_URL`。
 
 ## 项目结构
 
@@ -93,17 +89,16 @@ docker compose up -d --force-recreate
 
 或直接 `bash load-and-up.sh`。
 
-前端可单独启动。后端容器名为 `chat-agent`，共用网络 `chat-agent_default`（前端 compose 会自行创建）。后端起来后若还不在该网络上：
+前端可单独启动。chat 容器名为 `chat-agent`，site 容器名为 `site`。前端 compose 会创建网络 `chat-agent_default` 和 `site_default`。后端起来后若还不在对应网络上：
 
 ```bash
 docker network connect chat-agent_default chat-agent
+docker network connect site_default site
 ```
 
-```dotenv
-API_URL=http://chat-agent:9998
-```
+`CHAT_API_URL` 指向 chat 容器，`SITE_API_URL` 指向 site 容器，写在服务器上的 `.env` 里。
 
-调用链：`浏览器 / Nginx → 127.0.0.1:3030 前端容器 → chat-agent:9998 后端容器`。
+调用链：`浏览器 / Nginx → 127.0.0.1:3030 前端容器 → chat 或 site 后端容器`。
 
 ## 验证
 

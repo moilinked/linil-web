@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { getApiUrl } from "@/config/api"
+import { resolveBackendUrl } from "@/app/api/backend"
 import { getAccessToken } from "@/features/auth/session"
 import { isValidConversationId, isValidIdempotencyKey, type ChatRequest } from "@/features/chat/types"
 
@@ -21,11 +21,6 @@ export async function createChatBackendRequest(
   request: Request,
   pathname: "/api/chat/stream",
 ): Promise<ChatBackendRequest> {
-  const apiBaseURL = getApiUrl()
-  if (!apiBaseURL) {
-    return { error: NextResponse.json({ error: "The server is missing the API_URL configuration" }, { status: 500 }) }
-  }
-
   const accessToken = await getAccessToken()
   if (!accessToken) {
     return { error: NextResponse.json({ error: "valid Bearer token required" }, { status: 401 }) }
@@ -55,12 +50,11 @@ export async function createChatBackendRequest(
     }
   }
 
-  let backendURL: URL
-  try {
-    backendURL = new URL(pathname, apiBaseURL)
-  } catch {
-    return { error: NextResponse.json({ error: "The API_URL configuration is invalid" }, { status: 500 }) }
+  const resolved = resolveBackendUrl("chat", pathname)
+  if ("error" in resolved) {
+    return { error: resolved.error }
   }
+  const backendURL = resolved.url
 
   if (process.env.NODE_ENV === "development") {
     console.info("[chat] Authorization", {

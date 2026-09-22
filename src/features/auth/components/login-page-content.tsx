@@ -3,14 +3,7 @@
 import { useRouter } from "next/navigation"
 
 import { LoginForm } from "@/features/auth/components/login-form"
-
-function getSafeNextPath(value: string | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/login")) {
-    return "/chat"
-  }
-
-  return value
-}
+import { getSafeNextPath } from "@/features/auth/next-path"
 
 interface LoginPageContentProps {
   nextPath?: string

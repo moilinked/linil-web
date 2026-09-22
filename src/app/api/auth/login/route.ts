@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
-import { getApiUrl } from "@/config/api"
+import { resolveBackendUrl } from "@/app/api/backend"
 import {
   AUTH_COOKIE_NAME,
   AUTH_TOKEN_COOKIE_NAME,
@@ -51,17 +51,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Username and password are required" }, { status: 400 })
   }
 
-  const apiBaseURL = getApiUrl()
-  if (!apiBaseURL) {
-    return NextResponse.json({ error: "The server is missing the API_URL configuration" }, { status: 500 })
+  const resolved = resolveBackendUrl("site", "/api/auth/login")
+  if ("error" in resolved) {
+    return resolved.error
   }
-
-  let backendURL: URL
-  try {
-    backendURL = new URL("/api/auth/login", apiBaseURL)
-  } catch {
-    return NextResponse.json({ error: "The API_URL configuration is invalid" }, { status: 500 })
-  }
+  const backendURL = resolved.url
 
   let response: Response
   try {

@@ -13,11 +13,14 @@ services:
       PORT: "3030"
       HOSTNAME: 0.0.0.0
       TZ: Asia/Shanghai
-      API_URL: ${API_URL:-http://chat-agent:9998}
+      CHAT_API_URL: ${CHAT_API_URL:-${API_URL:-http://chat-agent:9998}}
+      SITE_API_URL: ${SITE_API_URL:-http://site:9997}
+      ADMIN_USERS: ${ADMIN_USERS:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
       - chat-agent
+      - site
     logging:
       driver: json-file
       options:
@@ -27,3 +30,5 @@ services:
 networks:
   chat-agent:
     name: ${CHAT_AGENT_NETWORK:-chat-agent_default}
+  site:
+    name: ${SITE_NETWORK:-site_default}

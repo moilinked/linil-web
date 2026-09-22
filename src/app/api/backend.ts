@@ -1,12 +1,41 @@
 import { NextResponse } from "next/server"
 
-import { getApiUrl } from "@/config/api"
+import { backendConfigName, getBackendBaseUrl, type BackendService } from "@/config/api"
 import { getAccessToken } from "@/features/auth/session"
 
 interface ProxyAuthenticatedRequestInit {
   method?: string
   body?: string
   headers?: Record<string, string>
+  service?: BackendService
+}
+
+const connectionErrors: Record<BackendService, string> = {
+  chat: "Unable to connect to the Chat Agent backend",
+  site: "Unable to connect to the site backend",
+}
+
+export function resolveBackendUrl(service: BackendService, pathname: string) {
+  const apiBaseURL = getBackendBaseUrl(service)
+  if (!apiBaseURL) {
+    return {
+      error: NextResponse.json(
+        { error: `The server is missing the ${backendConfigName(service)} configuration` },
+        { status: 500 },
+      ),
+    }
+  }
+
+  try {
+    return { url: new URL(pathname, apiBaseURL) }
+  } catch {
+    return {
+      error: NextResponse.json(
+        { error: `The ${backendConfigName(service)} configuration is invalid` },
+        { status: 500 },
+      ),
+    }
+  }
 }
 
 export async function proxyAuthenticatedRequest(
@@ -14,9 +43,10 @@ export async function proxyAuthenticatedRequest(
   pathname: string,
   init?: ProxyAuthenticatedRequestInit,
 ) {
-  const apiBaseURL = getApiUrl()
-  if (!apiBaseURL) {
-    return NextResponse.json({ error: "The server is missing the API_URL configuration" }, { status: 500 })
+  const service = init?.service ?? "chat"
+  const resolved = resolveBackendUrl(service, pathname)
+  if ("error" in resolved) {
+    return resolved.error
   }
 
   const accessToken = await getAccessToken()
@@ -24,15 +54,8 @@ export async function proxyAuthenticatedRequest(
     return NextResponse.json({ error: "valid Bearer token required" }, { status: 401 })
   }
 
-  let backendURL: URL
   try {
-    backendURL = new URL(pathname, apiBaseURL)
-  } catch {
-    return NextResponse.json({ error: "The API_URL configuration is invalid" }, { status: 500 })
-  }
-
-  try {
-    const response = await fetch(backendURL, {
+    const response = await fetch(resolved.url, {
       method: init?.method ?? request.method,
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -57,6 +80,6 @@ export async function proxyAuthenticatedRequest(
       return new Response(null, { status: 499 })
     }
 
-    return NextResponse.json({ error: "Unable to connect to the Chat Agent backend" }, { status: 502 })
+    return NextResponse.json({ error: connectionErrors[service] }, { status: 502 })
   }
 }

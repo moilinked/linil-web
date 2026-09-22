@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 
 import { LoginPageContent } from "@/features/auth/components/login-page-content"
+import { getSafeNextPath } from "@/features/auth/next-path"
 import { getSessionUser } from "@/features/auth/session"
 
 export const metadata: Metadata = {
@@ -10,11 +11,12 @@ export const metadata: Metadata = {
 }
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
+  const { next } = await searchParams
+  const nextPath = typeof next === "string" ? next : undefined
   const user = await getSessionUser()
   if (user) {
-    redirect("/chat")
+    redirect(getSafeNextPath(nextPath))
   }
 
-  const { next } = await searchParams
-  return <LoginPageContent nextPath={typeof next === "string" ? next : undefined} />
+  return <LoginPageContent nextPath={nextPath} />
 }

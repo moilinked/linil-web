@@ -20,7 +20,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     return parsed.error
   }
 
-  return proxyAuthenticatedRequest(request, `/api/conversations/${encodeURIComponent(parsed.id)}`)
+  return proxyAuthenticatedRequest(request, `/api/conversations/${encodeURIComponent(parsed.id)}`, {
+    service: "chat",
+  })
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -43,6 +45,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 
   return proxyAuthenticatedRequest(request, `/api/conversations/${encodeURIComponent(parsed.id)}`, {
+    service: "chat",
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
