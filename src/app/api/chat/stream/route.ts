@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { createBackendChatHeaders, createChatBackendRequest } from "@/app/api/chat/forward"
+import { clearAuthCookies } from "@/features/auth/session"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -57,10 +58,14 @@ export async function POST(request: Request) {
       signal: request.signal,
     })
 
+    if (response.status === 401) {
+      await clearAuthCookies()
+    }
+
     const contentType = response.headers.get("Content-Type") || ""
     if (!response.ok || !response.body || !contentType.includes("text/event-stream")) {
       const responseBody = await response.text()
-      return new Response(responseBody, {
+      return new NextResponse(responseBody, {
         status: response.status,
         headers: {
           "Content-Type": contentType || "application/json",

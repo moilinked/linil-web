@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { resolveBackendUrl } from "@/app/api/backend"
-import { getAccessToken } from "@/features/auth/session"
+import { requireAccessToken } from "@/features/auth/session"
 import { isValidConversationId, isValidIdempotencyKey, type ChatRequest } from "@/features/chat/types"
 
 const maxMessageLength = 10_000
@@ -21,10 +21,11 @@ export async function createChatBackendRequest(
   request: Request,
   pathname: "/api/chat/stream",
 ): Promise<ChatBackendRequest> {
-  const accessToken = await getAccessToken()
-  if (!accessToken) {
-    return { error: NextResponse.json({ error: "valid Bearer token required" }, { status: 401 }) }
+  const access = await requireAccessToken()
+  if (!access.ok) {
+    return { error: access.response }
   }
+  const accessToken = access.token
 
   const idempotencyKey = request.headers.get("Idempotency-Key")?.trim()
   if (!idempotencyKey) {

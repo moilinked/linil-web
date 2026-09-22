@@ -1,3 +1,4 @@
+import { notifyIfUnauthorized } from "@/features/auth/session-expiry"
 import type { ChatMessage, ConversationDetail, ConversationSummary } from "@/features/chat/types"
 
 function getErrorMessage(payload: { error?: string } | null, fallback: string) {
@@ -5,6 +6,7 @@ function getErrorMessage(payload: { error?: string } | null, fallback: string) {
 }
 
 async function readError(response: Response, fallback: string) {
+  notifyIfUnauthorized(response.status)
   const payload = (await response.json().catch(() => null)) as { error?: string } | null
   throw new Error(getErrorMessage(payload, fallback))
 }

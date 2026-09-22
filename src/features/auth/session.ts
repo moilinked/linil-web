@@ -1,4 +1,5 @@
 import { cookies } from "next/headers"
+import { NextResponse } from "next/server"
 
 import type { AuthUser } from "@/features/auth/types"
 
@@ -14,6 +15,13 @@ export const sessionCookieOptions = {
   maxAge: sessionMaxAge,
   secure: process.env.NODE_ENV === "production",
 }
+
+export const clearedSessionCookieOptions = {
+  ...sessionCookieOptions,
+  maxAge: 0,
+}
+
+const unauthorizedResponse = () => NextResponse.json({ error: "valid Bearer token required" }, { status: 401 })
 
 export function parseSessionValue(value: string | undefined): AuthUser | null {
   if (!value) {
@@ -35,16 +43,52 @@ export function serializeSessionValue(user: AuthUser): string {
   return JSON.stringify({ name: user.name })
 }
 
+export function isAuthSessionRejected(token: string | undefined, sessionValue: string | undefined) {
+  if (!token) {
+    return false
+  }
+
+  return !parseSessionValue(sessionValue)
+}
+
+export function isAuthSessionUnusable(token: string | undefined, sessionValue: string | undefined) {
+  if (!token && !sessionValue) {
+    return false
+  }
+
+  return !token || isAuthSessionRejected(token, sessionValue)
+}
+
+export async function clearAuthCookies() {
+  const cookieStore = await cookies()
+  cookieStore.set(AUTH_COOKIE_NAME, "", clearedSessionCookieOptions)
+  cookieStore.set(AUTH_TOKEN_COOKIE_NAME, "", clearedSessionCookieOptions)
+}
+
 export async function getSessionUser(): Promise<AuthUser | null> {
   const cookieStore = await cookies()
-  if (!cookieStore.get(AUTH_TOKEN_COOKIE_NAME)?.value) {
+  const token = cookieStore.get(AUTH_TOKEN_COOKIE_NAME)?.value
+  if (!token || isAuthSessionRejected(token, cookieStore.get(AUTH_COOKIE_NAME)?.value)) {
     return null
   }
 
   return parseSessionValue(cookieStore.get(AUTH_COOKIE_NAME)?.value)
 }
 
-export async function getAccessToken(): Promise<string | null> {
+export async function requireAccessToken(): Promise<
+  { ok: true; token: string } | { ok: false; response: NextResponse }
+> {
   const cookieStore = await cookies()
-  return cookieStore.get(AUTH_TOKEN_COOKIE_NAME)?.value ?? null
+  const token = cookieStore.get(AUTH_TOKEN_COOKIE_NAME)?.value
+  const sessionValue = cookieStore.get(AUTH_COOKIE_NAME)?.value
+
+  if (!token || isAuthSessionUnusable(token, sessionValue)) {
+    if (token || sessionValue) {
+      await clearAuthCookies()
+    }
+
+    return { ok: false, response: unauthorizedResponse() }
+  }
+
+  return { ok: true, token }
 }

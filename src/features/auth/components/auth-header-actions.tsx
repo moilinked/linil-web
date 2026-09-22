@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { LogOut } from "lucide-react"
 
@@ -25,7 +24,6 @@ function getInitials(name: string) {
 }
 
 export function AuthHeaderActions() {
-  const router = useRouter()
   const { user, isAuthenticated, logout } = useAuth()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -45,7 +43,6 @@ export function AuthHeaderActions() {
 
     try {
       await logout()
-      router.refresh()
     } finally {
       setIsLoggingOut(false)
     }

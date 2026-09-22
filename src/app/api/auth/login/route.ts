@@ -7,7 +7,6 @@ import {
   AUTH_TOKEN_COOKIE_NAME,
   serializeSessionValue,
   sessionCookieOptions,
-  sessionMaxAge,
 } from "@/features/auth/session"
 import type { AuthUser, LoginRequest } from "@/features/auth/types"
 
@@ -16,7 +15,6 @@ interface BackendLoginPayload {
   accessToken?: unknown
   token?: unknown
   token_type?: unknown
-  expires_in?: unknown
   error?: unknown
   message?: unknown
   detail?: unknown
@@ -84,26 +82,17 @@ export async function POST(request: Request) {
   }
 
   const tokenType = readString(payload?.token_type) || "Bearer"
-  const expiresIn =
-    typeof payload?.expires_in === "number" && Number.isFinite(payload.expires_in) && payload.expires_in > 0
-      ? Math.floor(payload.expires_in)
-      : sessionMaxAge
   const user: AuthUser = {
     name: readString(payload?.user?.name) || readString(payload?.user?.username) || username,
   }
   const cookieStore = await cookies()
-  const cookieOptions = {
-    ...sessionCookieOptions,
-    maxAge: expiresIn,
-  }
 
-  cookieStore.set(AUTH_COOKIE_NAME, serializeSessionValue(user), cookieOptions)
-  cookieStore.set(AUTH_TOKEN_COOKIE_NAME, accessToken, cookieOptions)
+  cookieStore.set(AUTH_COOKIE_NAME, serializeSessionValue(user), sessionCookieOptions)
+  cookieStore.set(AUTH_TOKEN_COOKIE_NAME, accessToken, sessionCookieOptions)
 
   if (process.env.NODE_ENV === "development") {
     console.info("[auth] Bearer token stored", {
       tokenType,
-      expiresIn,
       tokenLength: accessToken.length,
       tokenPreview: `${accessToken.slice(0, 8)}…`,
     })

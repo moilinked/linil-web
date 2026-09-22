@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { backendConfigName, getBackendBaseUrl, type BackendService } from "@/config/api"
-import { getAccessToken } from "@/features/auth/session"
+import { clearAuthCookies, requireAccessToken } from "@/features/auth/session"
 
 interface ProxyAuthenticatedRequestInit {
   method?: string
@@ -53,16 +53,16 @@ export async function proxyAuthenticatedRequest(
     return resolved.error
   }
 
-  const accessToken = await getAccessToken()
-  if (!accessToken) {
-    return NextResponse.json({ error: "valid Bearer token required" }, { status: 401 })
+  const access = await requireAccessToken()
+  if (!access.ok) {
+    return access.response
   }
 
   try {
     const response = await fetch(resolved.url, {
       method: init?.method ?? request.method,
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${access.token}`,
         Accept: "application/json",
         ...init?.headers,
       },
@@ -71,8 +71,12 @@ export async function proxyAuthenticatedRequest(
       signal: request.signal,
     })
 
+    if (response.status === 401) {
+      await clearAuthCookies()
+    }
+
     const responseBody = await response.text()
-    return new Response(responseBody, {
+    return new NextResponse(responseBody, {
       status: response.status,
       headers: {
         "Content-Type": response.headers.get("Content-Type") || "application/json",

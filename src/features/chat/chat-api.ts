@@ -1,3 +1,4 @@
+import { notifyIfUnauthorized } from "@/features/auth/session-expiry"
 import { applyChatStreamEvent } from "@/features/chat/parse-stream-event"
 import type { ChatRequest } from "@/features/chat/types"
 
@@ -60,6 +61,7 @@ export async function streamChatMessage(
   })
 
   if (!response.ok) {
+    notifyIfUnauthorized(response.status)
     const payload = (await response.json().catch(() => null)) as { error?: string } | null
     throw new Error(getErrorMessage(payload, "The chat service is temporarily unavailable"))
   }
