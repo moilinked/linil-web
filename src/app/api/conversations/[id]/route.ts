@@ -3,8 +3,6 @@ import { NextResponse } from "next/server"
 import { proxyAuthenticatedRequest } from "@/app/api/backend"
 import { conversationTitleMaxLength, isValidConversationId, normalizeConversationTitle } from "@/features/chat/types"
 
-export const dynamic = "force-dynamic"
-
 async function conversationParams(context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params
   if (!isValidConversationId(id)) {

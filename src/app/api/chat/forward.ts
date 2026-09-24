@@ -5,6 +5,7 @@ import { requireAccessToken } from "@/features/auth/session"
 import { isValidConversationId, isValidIdempotencyKey, type ChatRequest } from "@/features/chat/types"
 
 const maxMessageLength = 10_000
+const chatStreamPath = "/api/chat/stream"
 
 export type ChatBackendRequest =
   | {
@@ -17,10 +18,7 @@ export type ChatBackendRequest =
       body: ChatRequest
     }
 
-export async function createChatBackendRequest(
-  request: Request,
-  pathname: "/api/chat/stream",
-): Promise<ChatBackendRequest> {
+export async function createChatBackendRequest(request: Request): Promise<ChatBackendRequest> {
   const access = await requireAccessToken()
   if (!access.ok) {
     return { error: access.response }
@@ -51,23 +49,13 @@ export async function createChatBackendRequest(
     }
   }
 
-  const resolved = resolveBackendUrl("chat", pathname)
+  const resolved = resolveBackendUrl("chat", chatStreamPath)
   if (!resolved.ok) {
     return { error: resolved.error }
   }
-  const backendURL = resolved.url
-
-  if (process.env.NODE_ENV === "development") {
-    console.info("[chat] Authorization", {
-      path: pathname,
-      present: true,
-      tokenLength: accessToken.length,
-      tokenPreview: `${accessToken.slice(0, 8)}…`,
-    })
-  }
 
   return {
-    backendURL,
+    backendURL: resolved.url,
     accessToken,
     idempotencyKey,
     body: conversationID ? { conversation_id: conversationID, message } : { message },

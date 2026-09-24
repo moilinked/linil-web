@@ -14,7 +14,6 @@ interface BackendLoginPayload {
   access_token?: unknown
   accessToken?: unknown
   token?: unknown
-  token_type?: unknown
   error?: unknown
   message?: unknown
   detail?: unknown
@@ -81,7 +80,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "The authentication service returned an invalid response" }, { status: 502 })
   }
 
-  const tokenType = readString(payload?.token_type) || "Bearer"
   const user: AuthUser = {
     name: readString(payload?.user?.name) || readString(payload?.user?.username) || username,
   }
@@ -89,14 +87,6 @@ export async function POST(request: Request) {
 
   cookieStore.set(AUTH_COOKIE_NAME, serializeSessionValue(user), sessionCookieOptions)
   cookieStore.set(AUTH_TOKEN_COOKIE_NAME, accessToken, sessionCookieOptions)
-
-  if (process.env.NODE_ENV === "development") {
-    console.info("[auth] Bearer token stored", {
-      tokenType,
-      tokenLength: accessToken.length,
-      tokenPreview: `${accessToken.slice(0, 8)}…`,
-    })
-  }
 
   return NextResponse.json({ user })
 }

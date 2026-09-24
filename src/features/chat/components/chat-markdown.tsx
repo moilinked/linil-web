@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import Markdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -10,7 +11,8 @@ interface ChatMarkdownProps {
   className?: string
 }
 
-export function ChatMarkdown({ content, className }: ChatMarkdownProps) {
+// Memoized so a streaming message does not re-parse every other message in the transcript.
+export const ChatMarkdown = memo(function ChatMarkdown({ content, className }: ChatMarkdownProps) {
   return (
     <div
       className={cn(
@@ -70,4 +72,4 @@ export function ChatMarkdown({ content, className }: ChatMarkdownProps) {
       </Markdown>
     </div>
   )
-}
+})

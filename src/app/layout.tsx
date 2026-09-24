@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 
 import { PageDecor } from "@/components/layout/page-decor"
-import { ThemeProvider } from "@/components/layout/theme-provider"
 import { siteConfig } from "@/config/site"
 
 import "./globals.css"
@@ -31,22 +30,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="zh-CN"
-      suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="zh-CN" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="relative isolate flex min-h-full flex-col">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          forcedTheme="light"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          <PageDecor />
-          <div className="relative z-10 flex min-h-full flex-1 flex-col">{children}</div>
-        </ThemeProvider>
+        <PageDecor />
+        <div className="relative z-10 flex min-h-full flex-1 flex-col">{children}</div>
       </body>
     </html>
   )

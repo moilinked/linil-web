@@ -132,9 +132,23 @@ function statusForTool(name: string) {
   return "Using a tool…"
 }
 
-function looksLikeJsonObject(value: string) {
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value)
+  } catch {
+    return undefined
+  }
+}
+
+// Text is only rejected when it really is a JSON envelope. Matching on the braces alone would
+// swallow legitimate markdown such as `{ ... }` inside a fenced code block.
+function isJsonObject(value: string) {
   const trimmed = value.trim()
-  return trimmed.startsWith("{") && trimmed.endsWith("}")
+  return trimmed.startsWith("{") && asRecord(parseJson(trimmed)) !== null
+}
+
+function isJsonArray(value: string) {
+  return value.startsWith("[") && Array.isArray(parseJson(value))
 }
 
 function inferKind(eventName: string, parsed: Record<string, unknown> | null, trimmed: string): ChatStreamKind | "" {
@@ -160,7 +174,7 @@ function inferKind(eventName: string, parsed: Record<string, unknown> | null, tr
   }
 
   const delta = readDeltaText(parsed)
-  if (delta && !looksLikeJsonObject(delta)) {
+  if (delta && !isJsonObject(delta)) {
     return "delta"
   }
 
@@ -174,19 +188,13 @@ export function applyChatStreamEvent(eventName: string, data: string, current: s
     return { kind: "done", content: current, done: true }
   }
 
-  if (trimmed.startsWith("[")) {
+  if (isJsonArray(trimmed)) {
     return { kind: "ignored", content: current, done: false }
   }
 
-  let parsed: Record<string, unknown> | null = null
-  if (trimmed.startsWith("{")) {
-    try {
-      parsed = asRecord(JSON.parse(data) as unknown)
-    } catch {
-      parsed = null
-    }
-  }
+  const parsed = trimmed.startsWith("{") ? asRecord(parseJson(trimmed)) : null
 
+  // A JSON envelope we cannot read is metadata rather than text.
   if (trimmed.startsWith("{") && !parsed) {
     return { kind: "ignored", content: current, done: false }
   }
@@ -213,13 +221,13 @@ export function applyChatStreamEvent(eventName: string, data: string, current: s
 
   if (kind === "done") {
     const snapshot = parsed ? readDoneText(parsed) : ""
-    const next = snapshot && !looksLikeJsonObject(snapshot) ? snapshot : current
+    const next = snapshot && !isJsonObject(snapshot) ? snapshot : current
     const conversationId = parsed ? readString(parsed.conversation_id) : ""
     return { kind: "done", content: next, done: true, conversationId: conversationId || undefined }
   }
 
   const delta = parsed ? readDeltaText(parsed) : trimmed
-  if (delta && !looksLikeJsonObject(delta)) {
+  if (delta && !isJsonObject(delta)) {
     return { kind: "delta", content: current + delta, done: false }
   }
 

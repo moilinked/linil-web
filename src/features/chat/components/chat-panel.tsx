@@ -1,6 +1,6 @@
 "use client"
 
-import { type KeyboardEvent, type SubmitEvent, useEffect, useRef, useState } from "react"
+import { type KeyboardEvent, type SubmitEvent, useCallback, useEffect, useReducer, useRef, useState } from "react"
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -35,7 +35,6 @@ import {
   MessageScroller,
   MessageScrollerButton,
   MessageScrollerContent,
-  MessageScrollerItem,
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller"
@@ -43,7 +42,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/features/auth/auth-context"
 import { streamChatMessage } from "@/features/chat/chat-api"
 import { CHAT_RELOAD_EVENT } from "@/features/chat/chat-reload"
-import { ChatMarkdown } from "@/features/chat/components/chat-markdown"
+import { chatReducer, createInitialChatState } from "@/features/chat/chat-state"
+import { ChatMessageRow } from "@/features/chat/components/chat-message"
 import { ConversationTitle } from "@/features/chat/components/conversation-title"
 import {
   clearConversationMessages,
@@ -53,7 +53,6 @@ import {
   updateConversationTitle,
 } from "@/features/chat/conversation-api"
 import type { ChatMessage } from "@/features/chat/types"
-import { cn } from "@/lib/utils"
 
 function ChatEmptyState({ title, description }: { title: string; description: string }) {
   return (
@@ -81,76 +80,63 @@ function getTimeOfDayGreeting() {
   return "Evening"
 }
 
+function toErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
 export function ChatPanel() {
   const { isAuthenticated, user } = useAuth()
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [conversationId, setConversationId] = useState<string | null>(null)
-  const [conversationTitle, setConversationTitle] = useState("")
+  const [state, dispatch] = useReducer(chatReducer, isAuthenticated, createInitialChatState)
   const [input, setInput] = useState("")
-  const [error, setError] = useState("")
-  const [isSending, setIsSending] = useState(false)
-  const [isHydrating, setIsHydrating] = useState(isAuthenticated)
-  const [isClearing, setIsClearing] = useState(false)
   const [isClearOpen, setIsClearOpen] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
-  const conversationIdRef = useRef<string | null>(null)
-  const mutationEpochRef = useRef(0)
+  const requestIdRef = useRef(0)
 
-  useEffect(() => {
-    conversationIdRef.current = conversationId
-  }, [conversationId])
+  const { phase, conversationId, title, messages, streamingMessageId, streamStatus, error } = state
+  const isBusy = phase !== "idle"
+
+  // Claiming a new requestId invalidates every callback still in flight for the previous one.
+  const nextRequest = useCallback(() => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    requestIdRef.current += 1
+    return requestIdRef.current
+  }, [])
 
   useEffect(() => {
     if (!isAuthenticated) {
-      abortRef.current?.abort()
-      abortRef.current = null
+      dispatch({ type: "reset", requestId: nextRequest() })
       return
     }
 
+    const requestId = nextRequest()
     const controller = new AbortController()
+    dispatch({ type: "hydrate:start", requestId })
 
     async function loadLatestConversation() {
-      abortRef.current?.abort()
-      abortRef.current = null
-      setIsSending(false)
-      setIsHydrating(true)
-      setError("")
-
       try {
         const conversations = await listConversations(controller.signal)
-        if (controller.signal.aborted) {
-          return
-        }
-
         const latest = conversations[0]
         if (!latest) {
-          conversationIdRef.current = null
-          setConversationId(null)
-          setConversationTitle("")
-          setMessages([])
+          dispatch({ type: "conversation:empty", requestId })
           return
         }
 
         const detail = await getConversation(latest.id, controller.signal)
-        if (controller.signal.aborted) {
-          return
-        }
-
-        conversationIdRef.current = detail.id
-        setConversationId(detail.id)
-        setConversationTitle(detail.title)
-        setMessages(toChatMessages(detail.id, detail.messages))
+        dispatch({
+          type: "conversation:loaded",
+          requestId,
+          id: detail.id,
+          title: detail.title,
+          messages: toChatMessages(detail.id, detail.messages),
+        })
       } catch (requestError) {
         if (controller.signal.aborted) {
           return
         }
 
-        setError(requestError instanceof Error ? requestError.message : "Failed to load conversation")
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsHydrating(false)
-        }
+        dispatch({ type: "failed", requestId, error: toErrorMessage(requestError, "Failed to load conversation") })
       }
     }
 
@@ -158,14 +144,11 @@ export function ChatPanel() {
 
     return () => {
       controller.abort()
-      abortRef.current?.abort()
     }
-  }, [isAuthenticated, reloadToken])
+  }, [isAuthenticated, reloadToken, nextRequest])
 
   useEffect(() => {
     function handleReload() {
-      abortRef.current?.abort()
-      abortRef.current = null
       setReloadToken((current) => current + 1)
     }
 
@@ -175,179 +158,100 @@ export function ChatPanel() {
     }
   }, [])
 
-  function handleStopStreaming() {
-    abortRef.current?.abort()
-  }
-
+  // Renaming does not interrupt a stream, so it keeps the current requestId instead of claiming a
+  // new one -- and is discarded if another request took over while it was in flight.
   async function handleRename(nextTitle: string) {
-    const id = conversationIdRef.current
-    if (!id) {
+    if (!conversationId) {
       return
     }
 
-    const summary = await updateConversationTitle(id, nextTitle)
-    setConversationTitle(summary.title)
+    const requestId = requestIdRef.current
+    const summary = await updateConversationTitle(conversationId, nextTitle)
+    dispatch({ type: "conversation:renamed", requestId, title: summary.title })
   }
 
   async function handleClearConversation() {
-    const id = conversationIdRef.current
-    if (!id || isClearing) {
+    if (!conversationId || phase === "clearing") {
       return
     }
 
-    mutationEpochRef.current += 1
-    const epoch = mutationEpochRef.current
-    abortRef.current?.abort()
-    abortRef.current = null
-    setIsSending(false)
-    setIsClearing(true)
-    setError("")
+    const requestId = nextRequest()
+    dispatch({ type: "clear:start", requestId })
 
     try {
-      const detail = await clearConversationMessages(id)
-      if (mutationEpochRef.current !== epoch) {
-        return
-      }
-
-      conversationIdRef.current = detail.id
-      setConversationId(detail.id)
-      setConversationTitle(detail.title)
-      setMessages(toChatMessages(detail.id, detail.messages))
+      const detail = await clearConversationMessages(conversationId)
+      dispatch({
+        type: "conversation:loaded",
+        requestId,
+        id: detail.id,
+        title: detail.title,
+        messages: toChatMessages(detail.id, detail.messages),
+      })
       setIsClearOpen(false)
     } catch (requestError) {
-      if (mutationEpochRef.current !== epoch) {
-        return
-      }
-
-      setError(requestError instanceof Error ? requestError.message : "Failed to clear conversation")
-    } finally {
-      if (mutationEpochRef.current === epoch) {
-        setIsClearing(false)
-      }
+      dispatch({ type: "failed", requestId, error: toErrorMessage(requestError, "Failed to clear conversation") })
     }
   }
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!isAuthenticated || isHydrating || isClearing) {
-      return
-    }
-
     const content = input.trim()
-    if (!content || isSending) {
+    if (!isAuthenticated || isBusy || !content) {
       return
     }
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content,
-    }
+    const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content }
+    const assistantMessage: ChatMessage = { id: crypto.randomUUID(), role: "assistant", content: "" }
 
-    const assistantMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content: "",
-    }
-    const submitEpoch = mutationEpochRef.current
-
-    setMessages((current) => [...current, userMessage, assistantMessage])
-    setInput("")
-    setError("")
-    setIsSending(true)
-
-    abortRef.current?.abort()
+    const requestId = nextRequest()
     const controller = new AbortController()
     abortRef.current = controller
+    dispatch({ type: "send:start", requestId, userMessage, assistantMessage })
+    setInput("")
 
     try {
       await streamChatMessage(
         {
-          ...(conversationIdRef.current ? { conversation_id: conversationIdRef.current } : {}),
+          ...(conversationId ? { conversation_id: conversationId } : {}),
           message: content,
         },
         {
           idempotencyKey: userMessage.id,
           signal: controller.signal,
           onText(nextContent) {
-            if (mutationEpochRef.current !== submitEpoch) {
-              return
-            }
-
-            setMessages((current) =>
-              current.map((message) =>
-                message.id === assistantMessage.id
-                  ? { ...message, content: nextContent, status: nextContent ? undefined : message.status }
-                  : message,
-              ),
-            )
+            dispatch({ type: "stream:text", requestId, content: nextContent })
           },
           onStatus(status) {
-            if (mutationEpochRef.current !== submitEpoch) {
-              return
-            }
-
-            setMessages((current) =>
-              current.map((message) =>
-                message.id === assistantMessage.id && !message.content ? { ...message, status } : message,
-              ),
-            )
+            dispatch({ type: "stream:status", requestId, status })
           },
           onConversationId(nextConversationId) {
-            if (mutationEpochRef.current !== submitEpoch) {
-              return
-            }
-
-            conversationIdRef.current = nextConversationId
-            setConversationId(nextConversationId)
-            setConversationTitle((current) => current || content.slice(0, 40))
+            dispatch({
+              type: "conversation:adopted",
+              requestId,
+              id: nextConversationId,
+              fallbackTitle: content.slice(0, 40),
+            })
           },
         },
       )
+      dispatch({ type: "settled", requestId })
     } catch (requestError) {
-      if (mutationEpochRef.current !== submitEpoch) {
-        return
-      }
-
       if (controller.signal.aborted) {
-        setMessages((current) => {
-          const assistant = current.find((message) => message.id === assistantMessage.id)
-          if (assistant?.content) {
-            return current
-          }
-
-          return current.filter((message) => message.id !== assistantMessage.id)
-        })
+        dispatch({ type: "aborted", requestId })
         return
       }
 
-      setError(requestError instanceof Error ? requestError.message : "Failed to send message")
-      setMessages((current) => {
-        const assistant = current.find((message) => message.id === assistantMessage.id)
-        if (assistant?.content) {
-          return current
-        }
-
-        return current.filter((message) => message.id !== assistantMessage.id)
-      })
+      dispatch({ type: "failed", requestId, error: toErrorMessage(requestError, "Failed to send message") })
     } finally {
-      if (mutationEpochRef.current !== submitEpoch) {
-        return
-      }
-
       if (abortRef.current === controller) {
         abortRef.current = null
-        setIsSending(false)
-        setMessages((current) =>
-          current.map((message) => (message.id === assistantMessage.id ? { ...message, status: undefined } : message)),
-        )
       }
     }
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (!isAuthenticated || isHydrating || isSending || isClearing) {
+    if (!isAuthenticated || isBusy) {
       return
     }
 
@@ -357,10 +261,11 @@ export function ChatPanel() {
     }
   }
 
-  const sessionMessages = isAuthenticated ? messages : []
-  const showHydrating = isAuthenticated && isHydrating && sessionMessages.length === 0
-  const canClearConversation =
-    isAuthenticated && Boolean(conversationId) && !isHydrating && (sessionMessages.length > 0 || isSending)
+  const isStreaming = phase === "streaming"
+  const isClearing = phase === "clearing"
+  const isInputLocked = !isAuthenticated || phase === "hydrating" || isClearing
+  const showHydrating = phase === "hydrating" && messages.length === 0
+  const canClearConversation = isAuthenticated && Boolean(conversationId) && (messages.length > 0 || isStreaming)
 
   return (
     <section className="flex h-full min-h-0 flex-1 overflow-hidden px-4 pb-8 sm:px-6">
@@ -368,9 +273,9 @@ export function ChatPanel() {
         <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-2">
           <div className="min-w-0 flex-1">
             <ConversationTitle
-              title={isAuthenticated ? conversationTitle : ""}
+              title={title}
               canEdit={isAuthenticated && Boolean(conversationId)}
-              disabled={isHydrating || isClearing}
+              disabled={phase === "hydrating" || isClearing}
               onSave={handleRename}
             />
           </div>
@@ -380,7 +285,7 @@ export function ChatPanel() {
             size="icon"
             aria-label="Clear conversation"
             className="size-8 shrink-0 cursor-pointer rounded-full"
-            disabled={!canClearConversation || isClearing}
+            disabled={!canClearConversation || phase === "hydrating" || isClearing}
             onClick={() => setIsClearOpen(true)}
           >
             {isClearing ? (
@@ -396,7 +301,7 @@ export function ChatPanel() {
             <MessageScroller className="min-h-0 flex-1 overflow-hidden">
               <MessageScrollerViewport aria-label="Conversation">
                 <MessageScrollerContent
-                  aria-busy={showHydrating || (isAuthenticated && isSending)}
+                  aria-busy={showHydrating || isStreaming}
                   className="flex min-h-full w-full flex-col px-3 py-4"
                 >
                   {showHydrating ? (
@@ -404,12 +309,12 @@ export function ChatPanel() {
                       <LoaderCircle aria-hidden="true" className="size-5 animate-spin text-muted-foreground" />
                       <span className="sr-only">Loading conversation</span>
                     </div>
-                  ) : sessionMessages.length === 0 && error ? (
+                  ) : messages.length === 0 && error ? (
                     <ChatEmptyState
                       title="Couldn't reach the chat service"
                       description="The backend may be offline. Please try again in a moment."
                     />
-                  ) : sessionMessages.length === 0 ? (
+                  ) : messages.length === 0 ? (
                     <ChatEmptyState
                       title={
                         isAuthenticated && user
@@ -425,33 +330,16 @@ export function ChatPanel() {
                       }
                     />
                   ) : (
-                    sessionMessages.map((message) => {
-                      const isUser = message.role === "user"
-                      const status = !isUser && isSending ? message.status : undefined
-                      const isWaiting = !isUser && !message.content && isSending
+                    messages.map((message) => {
+                      const isStreamingRow = message.id === streamingMessageId
 
                       return (
-                        <MessageScrollerItem key={message.id} messageId={message.id} scrollAnchor={isUser}>
-                          <article className={cn("flex items-start", isUser && "justify-end")}>
-                            {isUser ? (
-                              <div className="max-w-[85%] rounded-[20px] bg-primary px-4 py-2.5 text-sm leading-6 whitespace-pre-wrap text-primary-foreground">
-                                {message.content}
-                              </div>
-                            ) : (
-                              <div className="flex max-w-[85%] flex-col gap-2">
-                                {isWaiting ? (
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-                                    <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-                                    {status || "Thinking…"}
-                                  </div>
-                                ) : null}
-                                {message.content ? (
-                                  <ChatMarkdown content={message.content} className="text-foreground" />
-                                ) : null}
-                              </div>
-                            )}
-                          </article>
-                        </MessageScrollerItem>
+                        <ChatMessageRow
+                          key={message.id}
+                          message={message}
+                          isStreaming={isStreamingRow}
+                          status={isStreamingRow ? streamStatus : undefined}
+                        />
                       )
                     })
                   )}
@@ -475,7 +363,7 @@ export function ChatPanel() {
               aria-label="Chat message"
               rows={1}
               className="max-h-40 min-h-12 resize-none border-0 bg-transparent px-0 py-1 text-base leading-6 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:bg-transparent disabled:opacity-70"
-              disabled={!isAuthenticated || isHydrating || isClearing}
+              disabled={isInputLocked}
             />
             <div className="mt-2 flex items-center justify-between">
               <DropdownMenu>
@@ -487,7 +375,7 @@ export function ChatPanel() {
                       variant="outline"
                       aria-label="Add files"
                       className="size-8 rounded-full border-border bg-background"
-                      disabled={!isAuthenticated || isSending || isHydrating || isClearing}
+                      disabled={isInputLocked || isStreaming}
                     />
                   }
                 >
@@ -513,13 +401,13 @@ export function ChatPanel() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {isSending && isAuthenticated ? (
+              {isStreaming ? (
                 <Button
                   type="button"
                   size="icon"
                   aria-label="Stop generating"
                   className="size-8 cursor-pointer rounded-full bg-primary text-primary-foreground hover:bg-primary-hover"
-                  onClick={handleStopStreaming}
+                  onClick={() => abortRef.current?.abort()}
                 >
                   <Square aria-hidden="true" className="size-3.5 fill-current" />
                 </Button>
@@ -529,7 +417,7 @@ export function ChatPanel() {
                   size="icon"
                   aria-label="Send message"
                   className="size-8 cursor-pointer rounded-full bg-primary text-primary-foreground hover:bg-primary-hover"
-                  disabled={!isAuthenticated || isHydrating || isClearing || !input.trim()}
+                  disabled={isInputLocked || !input.trim()}
                 >
                   <ArrowUpIcon aria-hidden="true" className="size-4" />
                 </Button>

@@ -43,20 +43,18 @@ export function serializeSessionValue(user: AuthUser): string {
   return JSON.stringify({ name: user.name })
 }
 
-export function isAuthSessionRejected(token: string | undefined, sessionValue: string | undefined) {
-  if (!token) {
-    return false
-  }
-
-  return !parseSessionValue(sessionValue)
+// A session is only usable when both cookies are present and the profile cookie still parses.
+function readSessionUser(token: string | undefined, sessionValue: string | undefined) {
+  return token ? parseSessionValue(sessionValue) : null
 }
 
+// Distinguishes "signed out" from "has stale cookies that need clearing".
 export function isAuthSessionUnusable(token: string | undefined, sessionValue: string | undefined) {
   if (!token && !sessionValue) {
     return false
   }
 
-  return !token || isAuthSessionRejected(token, sessionValue)
+  return !readSessionUser(token, sessionValue)
 }
 
 export async function clearAuthCookies() {
@@ -67,12 +65,8 @@ export async function clearAuthCookies() {
 
 export async function getSessionUser(): Promise<AuthUser | null> {
   const cookieStore = await cookies()
-  const token = cookieStore.get(AUTH_TOKEN_COOKIE_NAME)?.value
-  if (!token || isAuthSessionRejected(token, cookieStore.get(AUTH_COOKIE_NAME)?.value)) {
-    return null
-  }
 
-  return parseSessionValue(cookieStore.get(AUTH_COOKIE_NAME)?.value)
+  return readSessionUser(cookieStore.get(AUTH_TOKEN_COOKIE_NAME)?.value, cookieStore.get(AUTH_COOKIE_NAME)?.value)
 }
 
 export async function requireAccessToken(): Promise<

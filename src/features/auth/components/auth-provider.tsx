@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 
 import { loginRequest, logoutRequest } from "@/features/auth/auth-api"
 import { AuthContext } from "@/features/auth/auth-context"
-import { LoginDialog } from "@/features/auth/components/login-dialog"
 import { subscribeSessionExpired } from "@/features/auth/session-expiry"
 import type { AuthUser } from "@/features/auth/types"
 
@@ -17,13 +16,8 @@ interface AuthProviderProps {
 export function AuthProvider({ initialUser, children }: AuthProviderProps) {
   const router = useRouter()
   const [user, setUser] = useState(initialUser)
-  const [isLoginOpen, setIsLoginOpen] = useState(false)
   const userRef = useRef(user)
   const endingRef = useRef<Promise<void> | null>(null)
-
-  useEffect(() => {
-    userRef.current = user
-  }, [user])
 
   const endSession = useCallback(() => {
     if (!userRef.current) {
@@ -35,7 +29,6 @@ export function AuthProvider({ initialUser, children }: AuthProviderProps) {
 
     userRef.current = null
     setUser(null)
-    setIsLoginOpen(false)
 
     const pending = logoutRequest()
       .catch(() => undefined)
@@ -54,20 +47,11 @@ export function AuthProvider({ initialUser, children }: AuthProviderProps) {
     const nextUser = await loginRequest({ username, password })
     userRef.current = nextUser
     setUser(nextUser)
-    setIsLoginOpen(false)
   }, [])
 
   const logout = useCallback(async () => {
     await endSession()
   }, [endSession])
-
-  const openLogin = useCallback(() => {
-    setIsLoginOpen(true)
-  }, [])
-
-  const closeLogin = useCallback(() => {
-    setIsLoginOpen(false)
-  }, [])
 
   useEffect(() => subscribeSessionExpired(() => void endSession()), [endSession])
 
@@ -77,17 +61,9 @@ export function AuthProvider({ initialUser, children }: AuthProviderProps) {
       isAuthenticated: Boolean(user),
       login,
       logout,
-      isLoginOpen,
-      openLogin,
-      closeLogin,
     }),
-    [user, login, logout, isLoginOpen, openLogin, closeLogin],
+    [user, login, logout],
   )
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-      <LoginDialog />
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -3,46 +3,8 @@ import { NextResponse } from "next/server"
 import { createBackendChatHeaders, createChatBackendRequest } from "@/app/api/chat/forward"
 import { clearAuthCookies } from "@/features/auth/session"
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-
-function pipeSse(body: ReadableStream<Uint8Array>, signal: AbortSignal) {
-  const reader = body.getReader()
-  const cancelBackend = () => {
-    void reader.cancel().catch(() => undefined)
-  }
-
-  signal.addEventListener("abort", cancelBackend, { once: true })
-
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (signal.aborted) {
-        cancelBackend()
-        controller.close()
-        return
-      }
-
-      try {
-        const { done, value } = await reader.read()
-        if (done) {
-          controller.close()
-          return
-        }
-
-        controller.enqueue(value)
-      } catch (error) {
-        cancelBackend()
-        controller.error(error)
-      }
-    },
-    cancel() {
-      cancelBackend()
-    },
-  })
-}
-
 export async function POST(request: Request) {
-  const prepared = await createChatBackendRequest(request, "/api/chat/stream")
+  const prepared = await createChatBackendRequest(request)
   if ("error" in prepared) {
     return prepared.error
   }
@@ -73,7 +35,8 @@ export async function POST(request: Request) {
       })
     }
 
-    return new Response(pipeSse(response.body, request.signal), {
+    // Hand the backend stream straight back; aborting the client request cancels it upstream.
+    return new Response(response.body, {
       status: 200,
       headers: {
         "Content-Type": "text/event-stream",

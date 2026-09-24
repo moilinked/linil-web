@@ -4,16 +4,10 @@ export interface ChatMessage {
   id: string
   role: ChatRole
   content: string
-  status?: string
 }
 
 export interface ChatRequest {
   conversation_id?: string
-  message: string
-}
-
-export interface ChatResponse {
-  conversation_id: string
   message: string
 }
 
@@ -43,12 +37,15 @@ export function normalizeConversationTitle(title: string) {
   return title.replace(/\s+/g, " ").trim()
 }
 
-export const conversationIdPattern = /^[A-Za-z0-9._-]{1,128}$/
+const conversationIdPattern = /^[A-Za-z0-9._-]{1,128}$/
+
+// The client sends crypto.randomUUID() as the idempotency key.
+const idempotencyKeyPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export function isValidConversationId(value: string) {
   return conversationIdPattern.test(value)
 }
 
 export function isValidIdempotencyKey(value: string) {
-  return conversationIdPattern.test(value)
+  return idempotencyKeyPattern.test(value)
 }

@@ -9,9 +9,6 @@ export interface AuthContextValue {
   isAuthenticated: boolean
   login: (username: string, password: string) => Promise<void>
   logout: () => Promise<void>
-  isLoginOpen: boolean
-  openLogin: () => void
-  closeLogin: () => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

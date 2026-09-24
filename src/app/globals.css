@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* The palette below is already dark and there is no theme switch, so this keeps the `dark:`
+   utilities that ship with the shadcn components inert instead of following the OS setting. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -88,43 +90,6 @@
   --sidebar-ring: #66d6f0;
 }
 
-.dark {
-  color-scheme: dark;
-  --background: #111827;
-  --foreground: #e5e7eb;
-  --heading: #f9fafb;
-  --card: #1f2937;
-  --card-foreground: #f9fafb;
-  --popover: #1f2937;
-  --popover-foreground: #f9fafb;
-  --primary: #66d6f0;
-  --primary-hover: #83e0f5;
-  --primary-foreground: #111827;
-  --secondary: #c2aae2;
-  --secondary-foreground: #111827;
-  --muted: #283548;
-  --muted-foreground: #9ca3af;
-  --accent: #f4b9cd;
-  --accent-foreground: #111827;
-  --destructive: #f87171;
-  --border: #374151;
-  --input: #374151;
-  --ring: #66d6f0;
-  --chart-1: #66d6f0;
-  --chart-2: #f4b9cd;
-  --chart-3: #c2aae2;
-  --chart-4: #83e0f5;
-  --chart-5: #9ca3af;
-  --sidebar: #1f2937;
-  --sidebar-foreground: #e5e7eb;
-  --sidebar-primary: #66d6f0;
-  --sidebar-primary-foreground: #111827;
-  --sidebar-accent: #283548;
-  --sidebar-accent-foreground: #f9fafb;
-  --sidebar-border: #374151;
-  --sidebar-ring: #66d6f0;
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -159,11 +124,7 @@
   height: min(42vh, 360px);
   opacity: 0.58;
   background-image:
-    repeating-linear-gradient(
-      to bottom,
-      var(--page-decor-line) 0 1px,
-      transparent 1px 5px
-    ),
+    repeating-linear-gradient(to bottom, var(--page-decor-line) 0 1px, transparent 1px 5px),
     radial-gradient(circle, var(--page-decor-dot) 0.85px, transparent 1.2px),
     radial-gradient(circle, var(--page-decor-dot-alt) 0.7px, transparent 1.05px);
   background-size:

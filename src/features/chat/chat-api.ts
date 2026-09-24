@@ -41,6 +41,38 @@ function getErrorMessage(payload: { error?: string } | null, fallback: string) {
   return payload && payload.error ? payload.error : fallback
 }
 
+// A single chunk can carry many events; coalesce them so React renders at most once per frame.
+function batchByFrame(onText: (content: string) => void) {
+  let pending: string | null = null
+  let frame = 0
+
+  function flush() {
+    frame = 0
+    if (pending === null) {
+      return
+    }
+
+    const content = pending
+    pending = null
+    onText(content)
+  }
+
+  return {
+    push(content: string) {
+      pending = content
+      if (!frame) {
+        frame = requestAnimationFrame(flush)
+      }
+    },
+    flush() {
+      if (frame) {
+        cancelAnimationFrame(frame)
+      }
+      flush()
+    },
+  }
+}
+
 export async function streamChatMessage(
   request: ChatRequest,
   { idempotencyKey, signal, onText, onStatus, onConversationId }: StreamChatMessageOptions,
@@ -90,6 +122,7 @@ export async function streamChatMessage(
 
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
+  const text = batchByFrame(onText)
   let buffer = ""
   let content = ""
   let streamError = ""
@@ -107,7 +140,7 @@ export async function streamChatMessage(
 
     if (next.content !== content) {
       content = next.content
-      onText(content)
+      text.push(content)
     }
 
     if (next.error) {
@@ -115,27 +148,31 @@ export async function streamChatMessage(
     }
   }
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) {
-      break
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        break
+      }
+
+      buffer += decoder.decode(value, { stream: true })
+      buffer = consumeSse(buffer, applyEvent)
+
+      if (streamError) {
+        await reader.cancel().catch(() => undefined)
+        throw new Error(streamError)
+      }
     }
 
-    buffer += decoder.decode(value, { stream: true })
-    buffer = consumeSse(buffer, applyEvent)
+    const remaining = decoder.decode()
+    if (remaining || buffer.trim()) {
+      consumeSse(`${buffer}${remaining}\n\n`, applyEvent)
+    }
 
     if (streamError) {
-      await reader.cancel().catch(() => undefined)
       throw new Error(streamError)
     }
-  }
-
-  const remaining = decoder.decode()
-  if (remaining || buffer.trim()) {
-    consumeSse(`${buffer}${remaining}\n\n`, applyEvent)
-  }
-
-  if (streamError) {
-    throw new Error(streamError)
+  } finally {
+    text.flush()
   }
 }
