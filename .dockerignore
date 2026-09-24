@@ -21,6 +21,7 @@ test-results/
 
 # Local development and editor files
 .git/
+.githooks/
 .gitignore
 .gitattributes
 .vscode/

@@ -67,27 +67,14 @@ src/
 pnpm docker:pack
 ```
 
-### 第一次
-
-上传 `dist/chat-agent-web-<version>-<timestamp>.zip`，在服务器解压后：
+打包结果是 `dist/chat-agent-web-<version>-<timestamp>.tar`。上传到服务器后：
 
 ```bash
-cp env.example .env
-bash load-and-up.sh
-```
-
-`docker-compose.yml`、`.env` 留在服务器目录，以后不用再传。
-
-### 以后更新
-
-只上传 `dist/chat-agent-web.tar`，覆盖服务器上同名文件，然后在该目录：
-
-```bash
-docker load -i chat-agent-web.tar
+docker load -i chat-agent-web-<version>-<timestamp>.tar
 docker compose up -d --force-recreate
 ```
 
-或直接 `bash load-and-up.sh`。
+`docker-compose.yml` 和 `.env` 留在服务器目录，以后不用再传。
 
 网络 `backend-chat-agent` 里的容器是 `chat-agent`，网络 `backend-site` 里的容器是 `site`。`CHAT_API_URL` 和 `SITE_API_URL` 用容器名，`CHAT_AGENT_NETWORK` 和 `SITE_NETWORK` 用网络名。前端 compose 只加入这两张已有网络。
 

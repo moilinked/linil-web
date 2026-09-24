@@ -1,0 +1,28 @@
+#!/bin/sh
+# Refuses to commit while unresolved markers remain in the source tree.
+#
+# The admin file manager currently ships with its auth guards switched off behind markers in
+# src/config/auth-bypass.ts, src/proxy.ts and src/app/(admin)/admin/layout.tsx. Turn the guards
+# back on and delete the markers before committing.
+#
+# Deliberate work-in-progress commit: git commit --no-verify
+#
+# Narrow MARKER to something like 'TODO(auth)' if ordinary TODOs should be allowed through.
+
+MARKER='TODO'
+SCOPE='src'
+
+# Scans the working tree including untracked files, not just what is staged, so a marker blocks
+# every commit until it is resolved -- even one that does not touch the file holding it.
+found=$(git grep --untracked -n -I -e "$MARKER" -- "$SCOPE")
+
+if [ -n "$found" ]; then
+  echo "pre-commit: refusing to commit, '$MARKER' still present in $SCOPE/" >&2
+  echo "" >&2
+  echo "$found" >&2
+  echo "" >&2
+  echo "Resolve them, or run 'git commit --no-verify' to commit anyway." >&2
+  exit 1
+fi
+
+exit 0

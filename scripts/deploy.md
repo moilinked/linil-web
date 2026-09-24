@@ -1,4 +1,4 @@
 ```bash
-docker build --load -t chat-agent-web:0.1.0 -t chat-agent-web:latest .
-docker save -o dist/chat-agent-web.tar chat-agent-web:0.1.0 chat-agent-web:latest
+docker build --load -t chat-agent-web:0.1.1 -t chat-agent-web:latest .
+docker save -o dist/chat-agent-web-0.1.1-20260924-115908.tar chat-agent-web:0.1.1 chat-agent-web:latest
 ```

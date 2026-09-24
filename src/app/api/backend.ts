@@ -5,10 +5,13 @@ import { clearAuthCookies, requireAccessToken } from "@/features/auth/session"
 
 interface ProxyAuthenticatedRequestInit {
   method?: string
-  body?: string
+  body?: BodyInit
   headers?: Record<string, string>
   service?: BackendService
 }
+
+// Per the fetch spec these statuses must not carry a body; constructing one would throw.
+const bodilessStatuses = new Set([204, 205, 304])
 
 const connectionErrors: Record<BackendService, string> = {
   chat: "Unable to connect to the Chat Agent backend",
@@ -75,7 +78,7 @@ export async function proxyAuthenticatedRequest(
       await clearAuthCookies()
     }
 
-    const responseBody = await response.text()
+    const responseBody = bodilessStatuses.has(response.status) ? null : await response.text()
     return new NextResponse(responseBody, {
       status: response.status,
       headers: {

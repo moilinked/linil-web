@@ -1,8 +1,7 @@
 # Local Docker packaging for offline deploy:
 #   1. docker build
 #   2. docker save
-#   3. zip image + compose files
-# Server: unzip, then bash load-and-up.sh (docker load && compose up)
+# Server: docker load -i chat-agent-web-<version>-<timestamp>.tar
 
 $ErrorActionPreference = "Stop"
 
@@ -19,16 +18,9 @@ if (-not $ImageTag) {
 $FullImage = "${ImageName}:${ImageTag}"
 $LatestImage = "${ImageName}:latest"
 $Stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$StageDir = Join-Path $Root "dist\docker-pack"
-$ZipPath = Join-Path $Root "dist\${ImageName}-${ImageTag}-${Stamp}.zip"
-$TarName = "${ImageName}.tar"
-$TarPath = Join-Path $StageDir $TarName
+$TarPath = Join-Path $Root "dist\${ImageName}-${ImageTag}-${Stamp}.tar"
 
 New-Item -ItemType Directory -Force -Path (Join-Path $Root "dist") | Out-Null
-if (Test-Path $StageDir) {
-  Remove-Item -Recurse -Force $StageDir
-}
-New-Item -ItemType Directory -Force -Path $StageDir | Out-Null
 
 Write-Host "docker build --load -t $FullImage -t $LatestImage ."
 docker build --load -t $FullImage -t $LatestImage .
@@ -42,25 +34,5 @@ if ($LASTEXITCODE -ne 0) {
   throw "docker save failed"
 }
 
-Copy-Item (Join-Path $Root "docker-compose.yml") (Join-Path $StageDir "docker-compose.yml")
-Copy-Item (Join-Path $Root ".env.docker.example") (Join-Path $StageDir "env.example")
-Copy-Item (Join-Path $Root "scripts\docker-load-and-up.sh") (Join-Path $StageDir "load-and-up.sh")
-
-$UpdateTarPath = Join-Path $Root "dist\$TarName"
-Copy-Item $TarPath $UpdateTarPath -Force
-
-if (Test-Path $ZipPath) {
-  Remove-Item -Force $ZipPath
-}
-
-$ZipFiles = @(
-  $TarPath,
-  (Join-Path $StageDir "docker-compose.yml"),
-  (Join-Path $StageDir "env.example"),
-  (Join-Path $StageDir "load-and-up.sh")
-)
-Compress-Archive -Path $ZipFiles -DestinationPath $ZipPath -CompressionLevel Optimal
-
-Write-Host "packed: $ZipPath"
-Write-Host "first deploy: upload the zip, unzip, then bash load-and-up.sh"
-Write-Host "later deploy: upload dist\$TarName over the server tar, then bash load-and-up.sh"
+Write-Host "packed: $TarPath"
+Write-Host "deploy: docker load -i $(Split-Path $TarPath -Leaf)"
