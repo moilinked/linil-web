@@ -1,17 +1,12 @@
 import type { Metadata } from "next"
 
-import { AdminPageHeading } from "@/features/admin/components/admin-page-heading"
+import { AdminDashboard } from "@/features/admin/components/admin-dashboard"
 
 export const metadata: Metadata = {
-  title: "Admin",
-  description: "Admin overview",
+  title: "Dashboard",
+  description: "Admin dashboard",
 }
 
 export default function AdminPage() {
-  return (
-    <AdminPageHeading
-      title="Overview"
-      description="Manage notes and accounts from this workspace. Content tools will be added next."
-    />
-  )
+  return <AdminDashboard />
 }

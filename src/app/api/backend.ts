@@ -20,6 +20,12 @@ const connectionErrors: Record<BackendService, string> = {
 
 type BackendUrlResult = { ok: true; url: URL } | { ok: false; error: NextResponse }
 
+function joinBackendUrl(base: string, pathname: string) {
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`
+  const relativePath = pathname.replace(/^\/+/, "")
+  return new URL(relativePath, normalizedBase)
+}
+
 export function resolveBackendUrl(service: BackendService, pathname: string): BackendUrlResult {
   const apiBaseURL = getBackendBaseUrl(service)
   if (!apiBaseURL) {
@@ -33,7 +39,7 @@ export function resolveBackendUrl(service: BackendService, pathname: string): Ba
   }
 
   try {
-    return { ok: true, url: new URL(pathname, apiBaseURL) }
+    return { ok: true, url: joinBackendUrl(apiBaseURL, pathname) }
   } catch {
     return {
       ok: false,
