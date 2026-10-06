@@ -3,6 +3,9 @@ import type { FileListPage, FileSummary, UploadedFile } from "@/features/admin/f
 
 const pageSize = 24
 
+export type FileSort = "last_modified" | "size"
+export type SortOrder = "asc" | "desc"
+
 async function readError(response: Response, fallback: string): Promise<never> {
   notifyIfUnauthorized(response.status)
   const payload = (await response.json().catch(() => null)) as { error?: string } | null
@@ -17,17 +20,34 @@ export function fileUrl(key: string) {
 
 interface ListFilesOptions {
   after?: string
+  name?: string
   prefix?: string
+  sort?: FileSort
+  order?: SortOrder
   signal?: AbortSignal
 }
 
-export async function listFiles({ after, prefix, signal }: ListFilesOptions = {}): Promise<FileListPage> {
+export async function listFiles({
+  after,
+  name,
+  prefix,
+  sort,
+  order,
+  signal,
+}: ListFilesOptions = {}): Promise<FileListPage> {
   const params = new URLSearchParams({ first: String(pageSize) })
   if (after) {
     params.set("after", after)
   }
+  if (name) {
+    params.set("name", name)
+  }
   if (prefix) {
     params.set("prefix", prefix)
+  }
+  if (sort) {
+    params.set("sort", sort)
+    params.set("order", order ?? "asc")
   }
 
   const response = await fetch(`/api/files?${params}`, { cache: "no-store", signal })
