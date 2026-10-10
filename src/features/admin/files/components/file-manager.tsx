@@ -43,6 +43,7 @@ import {
   type SortOrder,
 } from "@/features/admin/files/files-api"
 import { formatFileSize, isPreviewableImage, type FileSummary } from "@/features/admin/files/types"
+import { formatDate } from "@/lib/datetime"
 import { cn } from "@/lib/utils"
 
 const pageSizeOptions = [10, 20, 30, 50]
@@ -652,7 +653,7 @@ function FileRow({
         </div>
       </TableCell>
       <TableCell>{formatFileSize(file.size)}</TableCell>
-      <TableCell>{new Date(file.last_modified).toLocaleDateString()}</TableCell>
+      <TableCell>{formatDate(file.last_modified) || "Unknown date"}</TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-1">
           <Button type="button" variant="ghost" size="icon-sm" aria-label="Copy link" onClick={onCopy}>

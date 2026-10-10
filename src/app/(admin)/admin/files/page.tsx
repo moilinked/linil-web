@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function AdminFilesPage() {
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeading title="文件管理" description="上传图片和文件，Power By SeaweedFS" />
+      <AdminPageHeading title="文件管理" description="上传图片和文件，使用 SeaweedFS 存储" />
       <FileManager />
     </div>
   )

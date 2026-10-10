@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react"
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AdminHeader } from "@/features/admin/components/admin-header"
 import { AdminSidebar } from "@/features/admin/components/admin-sidebar"
@@ -36,6 +37,7 @@ export function AdminShell({ children, defaultOpen }: { children: ReactNode; def
           <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">{children}</div>
         </SidebarInset>
       </SidebarProvider>
+      <Toaster theme={theme} position="top-center" offset={{ top: "4.5rem" }} />
     </TooltipProvider>
   )
 }

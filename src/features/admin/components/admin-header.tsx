@@ -1,6 +1,6 @@
 "use client"
 
-import { Moon, Search, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -14,20 +14,6 @@ export function AdminHeader({ theme, onToggleTheme }: { theme: "dark" | "light";
         <Separator orientation="vertical" />
       </div>
       <div className="ms-auto flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          className="relative hidden h-8 w-40 justify-start! px-8 font-normal text-muted-foreground md:inline-flex lg:w-52 xl:w-64"
-        >
-          <Search className="absolute left-2.5 size-4" />
-          <span>Search</span>
-          <kbd
-            aria-hidden="true"
-            className="pointer-events-none absolute right-1.5 hidden h-5 items-center rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:inline-flex"
-          >
-            ⌘K
-          </kbd>
-        </Button>
         <Button
           type="button"
           variant="ghost"

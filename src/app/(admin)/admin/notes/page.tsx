@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 
 import { AdminPageHeading } from "@/features/admin/components/admin-page-heading"
+import { CreateNoteButton } from "@/features/admin/articles/components/create-note-button"
+import { NotesBoard } from "@/features/admin/articles/components/notes-board"
 
 export const metadata: Metadata = {
   title: "Notes",
@@ -8,5 +10,13 @@ export const metadata: Metadata = {
 }
 
 export default function AdminNotesPage() {
-  return <AdminPageHeading title="Notes" description="Create and edit notes here. The editor is not connected yet." />
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <AdminPageHeading title="Nodes" description="Manage notes" />
+        <CreateNoteButton />
+      </div>
+      <NotesBoard />
+    </div>
+  )
 }
