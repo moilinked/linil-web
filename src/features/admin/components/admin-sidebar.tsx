@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { ChevronRight, ChevronsUpDown, LogOut, Settings } from "lucide-react"
@@ -32,6 +31,7 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { BrandLogo } from "@/components/layout/brand-logo"
 import { siteConfig } from "@/config/site"
 import { cn } from "@/lib/utils"
 import { adminNavigation, adminSiteLink, isAdminPathActive } from "@/features/admin/admin-nav"
@@ -52,7 +52,7 @@ function AdminBrand() {
     <SidebarMenu>
       <SidebarMenuItem>
         <div className="flex h-12 w-full items-center gap-2 overflow-hidden rounded-md p-2 text-sm group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!">
-          <Image src={siteConfig.logo} alt="" width={32} height={32} className="size-8 rounded-full" />
+          <BrandLogo />
           <div className="grid flex-1 text-start leading-tight group-data-[collapsible=icon]:hidden">
             <span className="truncate font-semibold">{siteConfig.name} Admin</span>
           </div>

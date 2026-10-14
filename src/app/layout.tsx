@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 
 import { PageDecor } from "@/components/layout/page-decor"
 import { siteConfig } from "@/config/site"
+import { fileUrl } from "@/features/admin/files/files-api"
 
 import "./globals.css"
 
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   icons: {
-    icon: siteConfig.logo,
+    icon: fileUrl(siteConfig.faviconKey),
     apple: siteConfig.logo,
   },
 }

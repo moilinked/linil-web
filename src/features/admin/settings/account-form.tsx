@@ -4,9 +4,10 @@ import { useState, type FormEvent } from "react"
 import { ChevronDown } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
+import { FaviconField } from "@/features/admin/settings/favicon-field"
+import { LogoField } from "@/features/admin/settings/logo-field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
@@ -116,7 +117,6 @@ export function AccountForm() {
 
 export function AppearanceForm() {
   const [font, setFont] = useState("Inter")
-  const [theme, setTheme] = useState("dark")
   const [saved, setSaved] = useState(false)
 
   return (
@@ -127,6 +127,8 @@ export function AppearanceForm() {
         setSaved(true)
       }}
     >
+      <LogoField />
+      <FaviconField />
       <div className="space-y-2">
         <Label htmlFor="settings-font">Font</Label>
         <div className="relative w-max">
@@ -146,72 +148,10 @@ export function AppearanceForm() {
         </div>
         <p className="text-sm text-muted-foreground">Set the font you want to use in the dashboard.</p>
       </div>
-      <div className="space-y-2">
-        <Label>Theme</Label>
-        <p className="text-sm text-muted-foreground">Select the theme for the dashboard.</p>
-        <RadioGroup
-          value={theme}
-          onValueChange={(value) => setTheme(value)}
-          className="grid max-w-md grid-cols-2 gap-8 pt-2"
-        >
-          <ThemeOption value="light" label="Light" preview="light" />
-          <ThemeOption value="dark" label="Dark" preview="dark" />
-        </RadioGroup>
-      </div>
       <div className="flex items-center gap-3">
         <Button type="submit">Update preferences</Button>
         {saved ? <p className="text-sm text-muted-foreground">Saved on this page.</p> : null}
       </div>
     </form>
-  )
-}
-
-function ThemeOption({ value, label, preview }: { value: string; label: string; preview: "light" | "dark" }) {
-  return (
-    <Label className="block font-normal [&:has([data-checked])>div]:border-primary">
-      <RadioGroupItem value={value} className="sr-only" />
-      <div className="rounded-md border-2 border-muted p-1 hover:border-accent">
-        {preview === "light" ? <LightPreview /> : <DarkPreview />}
-      </div>
-      <span className="block w-full p-2 text-center">{label}</span>
-    </Label>
-  )
-}
-
-function LightPreview() {
-  return (
-    <div className="space-y-2 rounded-sm bg-[#ecedef] p-2">
-      <div className="space-y-2 rounded-md bg-white p-2 shadow-xs">
-        <div className="h-2 w-20 rounded-lg bg-[#ecedef]" />
-        <div className="h-2 w-24 rounded-lg bg-[#ecedef]" />
-      </div>
-      <div className="flex items-center gap-2 rounded-md bg-white p-2 shadow-xs">
-        <div className="size-4 rounded-full bg-[#ecedef]" />
-        <div className="h-2 w-24 rounded-lg bg-[#ecedef]" />
-      </div>
-      <div className="flex items-center gap-2 rounded-md bg-white p-2 shadow-xs">
-        <div className="size-4 rounded-full bg-[#ecedef]" />
-        <div className="h-2 w-24 rounded-lg bg-[#ecedef]" />
-      </div>
-    </div>
-  )
-}
-
-function DarkPreview() {
-  return (
-    <div className="space-y-2 rounded-sm bg-slate-950 p-2">
-      <div className="space-y-2 rounded-md bg-slate-800 p-2 shadow-xs">
-        <div className="h-2 w-20 rounded-lg bg-slate-400" />
-        <div className="h-2 w-24 rounded-lg bg-slate-400" />
-      </div>
-      <div className="flex items-center gap-2 rounded-md bg-slate-800 p-2 shadow-xs">
-        <div className="size-4 rounded-full bg-slate-400" />
-        <div className="h-2 w-24 rounded-lg bg-slate-400" />
-      </div>
-      <div className="flex items-center gap-2 rounded-md bg-slate-800 p-2 shadow-xs">
-        <div className="size-4 rounded-full bg-slate-400" />
-        <div className="h-2 w-24 rounded-lg bg-slate-400" />
-      </div>
-    </div>
   )
 }

@@ -10,10 +10,7 @@ export const metadata: Metadata = {
 
 export default function SettingsAppearancePage() {
   return (
-    <ContentSection
-      title="Appearance"
-      description="Customize the appearance of the app. Automatically switch between day and night themes."
-    >
+    <ContentSection title="Appearance" description="Customize the appearance of the app.">
       <AppearanceForm />
     </ContentSection>
   )

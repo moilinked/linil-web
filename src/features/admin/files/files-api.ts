@@ -64,11 +64,14 @@ export async function listFiles({
   }
 }
 
-export async function uploadFile(file: File, signal?: AbortSignal): Promise<UploadedFile> {
+export async function uploadFile(file: File, options?: { key?: string; signal?: AbortSignal }): Promise<UploadedFile> {
   const body = new FormData()
   body.set("file", file)
+  if (options?.key) {
+    body.set("key", options.key)
+  }
 
-  const response = await fetch("/api/files", { method: "POST", body, signal })
+  const response = await fetch("/api/files", { method: "POST", body, signal: options?.signal })
   if (!response.ok) {
     await readError(response, `Failed to upload ${file.name}`)
   }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { proxyAuthenticatedRequest, resolveBackendUrl } from "@/app/api/backend"
+import { siteConfig } from "@/config/site"
 
 // The backend expects each key segment percent-encoded with the separators left intact.
 function encodeKey(segments: string[]) {
@@ -49,9 +50,14 @@ export async function GET(request: Request, context: { params: Promise<{ key: st
       signal: request.signal,
     })
 
+    const headers = pickHeaders(response.headers, forwardedResponseHeaders)
+    if (key.length === 1 && (key[0] === siteConfig.faviconKey || key[0] === siteConfig.logoKey)) {
+      headers.set("Cache-Control", "public, max-age=0, must-revalidate")
+    }
+
     return new Response(response.status === 304 ? null : response.body, {
       status: response.status,
-      headers: pickHeaders(response.headers, forwardedResponseHeaders),
+      headers,
     })
   } catch {
     if (request.signal.aborted) {

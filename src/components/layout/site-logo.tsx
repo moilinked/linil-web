@@ -1,10 +1,10 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { type MouseEvent, useState } from "react"
 
+import { BrandLogo } from "@/components/layout/brand-logo"
 import { siteConfig } from "@/config/site"
 import { requestChatReload } from "@/features/chat/chat-reload"
 import { cn } from "@/lib/utils"
@@ -34,14 +34,10 @@ export function SiteLogo() {
       className="w-fit rounded-full transition-opacity outline-none hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50"
       onClick={handleClick}
     >
-      <Image
-        src={siteConfig.logo}
-        alt=""
-        width={32}
-        height={32}
-        className={cn("size-8 rounded-full", isSpinning && "animate-[spin_0.7s_ease-in-out]")}
-        onAnimationEnd={() => setIsSpinning(false)}
+      <BrandLogo
         priority
+        className={cn(isSpinning && "animate-[spin_0.7s_ease-in-out]")}
+        onAnimationEnd={() => setIsSpinning(false)}
       />
     </Link>
   )

@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "*": ["node_modules/@swc/helpers/**/*"],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/favicon.ico",
+        destination: "/api/files/favicon.ico",
+      },
+    ]
+  },
 }
 
 export default nextConfig

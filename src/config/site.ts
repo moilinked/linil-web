@@ -2,6 +2,8 @@ export const siteConfig = {
   name: "Aemeath",
   description: "Chat Agent、Notes & Works",
   logo: "/logo3.png",
+  logoKey: "oilinil-logo",
+  faviconKey: "favicon.ico",
   navigation: [
     { href: "/chat", label: "Chat" },
     { href: "/notes", label: "Notes" },
