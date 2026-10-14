@@ -1,0 +1,12 @@
+---
+description: 约束生成 commit message 时的提交行为
+alwaysApply: true
+---
+
+# Commit Message
+
+- 用户要求“总结 commit message”或类似表述时，只生成建议的 commit message，不执行 `git commit`。
+- 只有用户明确要求“总结并提交”、明确提供提交指令，或明确确认需要提交时，才执行 `git commit`。
+- 生成或提交 commit message 时，使用英文单行 Gitmoji 格式，例如：`✨ feat: support uploads with explicit file keys`。
+- 总结 commit message 时，只在纯文本代码块中输出可直接复制的 message，不添加序号、说明或其他前后缀；多条 message 分别使用独立代码块。
+- 执行提交时，不设置 `--author`，也不添加 `Co-authored-by`、`Signed-off-by` 等作者或签署信息。
