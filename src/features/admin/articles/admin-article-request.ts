@@ -1,21 +1,36 @@
 import { NextResponse } from "next/server"
 
+import { readTagList } from "@/features/admin/articles/tags"
+
 const articleIdPattern = /^[0-9a-f]{32}$/
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const audiences = new Set(["public", "user", "admin"])
+const contentTypes = new Set(["markdown", "frontend"])
 const maxTitleLength = 200
 const maxSummaryLength = 1000
 const maxMarkdownBytes = 1024 * 1024
 const maxJsonBytes = 2 * 1024 * 1024
 
 const maxDeleteBatch = 100
-const createFields = new Set(["slug", "audience"])
+const createFields = new Set(["slug", "content_type", "audience"])
 const deleteFields = new Set(["ids"])
-const draftFields = new Set(["slug", "audience", "title", "summary", "markdown", "cover_file_key", "expected_version"])
+const draftFields = new Set([
+  "slug",
+  "content_type",
+  "audience",
+  "tags",
+  "title",
+  "summary",
+  "markdown",
+  "cover_file_key",
+  "expected_version",
+])
 
 export interface ArticleDraftBody {
   slug: string
+  content_type: string
   audience: string
+  tags: string[]
   title: string
   summary: string
   markdown: string
@@ -29,15 +44,25 @@ export function parseArticleId(id: string) {
   return articleIdPattern.test(id)
 }
 
-export async function parseArticleCreate(request: Request): Promise<ParseResult<{ slug: string; audience: string }>> {
+export async function parseArticleCreate(
+  request: Request,
+): Promise<ParseResult<{ slug: string; content_type?: string; audience: string }>> {
   const payload = await readJsonObject(request, createFields)
   if (!payload.ok) {
     return payload
   }
 
   const slug = readOptionalString(payload.value.slug)
+  const contentType = readOptionalString(payload.value.content_type)
   const audience = readOptionalString(payload.value.audience)
-  if (slug === null || !isValidSlug(slug) || audience === null || (audience !== "" && !audiences.has(audience))) {
+  if (
+    slug === null ||
+    !isValidSlug(slug) ||
+    contentType === null ||
+    (contentType !== "" && !contentTypes.has(contentType)) ||
+    audience === null ||
+    (audience !== "" && !audiences.has(audience))
+  ) {
     return invalid("article is invalid")
   }
 
@@ -45,6 +70,7 @@ export async function parseArticleCreate(request: Request): Promise<ParseResult<
     ok: true,
     value: {
       slug: slug.toLowerCase(),
+      ...(contentType ? { content_type: contentType } : {}),
       audience: audience || "public",
     },
   }
@@ -57,7 +83,9 @@ export async function parseArticleDraft(request: Request): Promise<ParseResult<A
   }
 
   const slug = readOptionalString(payload.value.slug)
+  const contentType = readOptionalString(payload.value.content_type)
   const audience = readOptionalString(payload.value.audience)
+  const tags = payload.value.tags === undefined ? [] : readTagList(payload.value.tags)
   const title = readTrimmedString(payload.value.title)
   const summary = readTrimmedString(payload.value.summary)
   const markdown = readRequiredString(payload.value.markdown)
@@ -67,8 +95,12 @@ export async function parseArticleDraft(request: Request): Promise<ParseResult<A
   if (
     slug === null ||
     (slug !== "" && !isValidSlug(slug)) ||
+    contentType === null ||
+    (contentType !== "" && !contentTypes.has(contentType)) ||
+    (contentType === "frontend" && markdown !== null && markdown.trim() !== "") ||
     audience === null ||
     (audience !== "" && !audiences.has(audience)) ||
+    tags === null ||
     title === null ||
     [...title].length > maxTitleLength ||
     summary === null ||
@@ -85,7 +117,9 @@ export async function parseArticleDraft(request: Request): Promise<ParseResult<A
     ok: true,
     value: {
       slug: slug.toLowerCase(),
+      content_type: contentType,
       audience,
+      tags,
       title,
       summary,
       markdown,

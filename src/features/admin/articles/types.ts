@@ -1,5 +1,6 @@
 export type ArticleStatus = "draft" | "published"
 export type ArticleAudience = "public" | "user" | "admin"
+export type ArticleContentType = "markdown" | "frontend"
 export type ArticleSort = "published_at" | "updated_at" | "created_at"
 export type ArticleSortOrder = "asc" | "desc"
 
@@ -7,6 +8,7 @@ export interface AdminArticle {
   id: string
   slug: string
   status: ArticleStatus
+  contentType: ArticleContentType
   audience: ArticleAudience
   publishedAt: string | null
   hasPdf: boolean
@@ -29,7 +31,9 @@ export interface AdminArticleDetail {
   id: string
   slug: string
   status: ArticleStatus
+  contentType: ArticleContentType
   audience: ArticleAudience
+  tags: string[]
   publishedAt: string | null
   hasPdf: boolean
   slugLocked: boolean
@@ -49,7 +53,9 @@ interface AdminArticlePayload {
   id?: unknown
   slug?: unknown
   status?: unknown
+  content_type?: unknown
   audience?: unknown
+  tags?: unknown
   published_at?: unknown
   pdf_url?: unknown
   draft?: ArticleContentPayload
@@ -59,6 +65,10 @@ interface AdminArticlePayload {
 
 const statuses = new Set<ArticleStatus>(["draft", "published"])
 const audiences = new Set<ArticleAudience>(["public", "user", "admin"])
+
+function readContentType(value: unknown): ArticleContentType {
+  return value === "frontend" ? "frontend" : "markdown"
+}
 
 export function normalizeAdminArticle(value: unknown): AdminArticle | null {
   if (!value || typeof value !== "object") {
@@ -82,6 +92,7 @@ export function normalizeAdminArticle(value: unknown): AdminArticle | null {
     id: payload.id,
     slug: payload.slug,
     status: payload.status as ArticleStatus,
+    contentType: readContentType(payload.content_type),
     audience: audiences.has(payload.audience as ArticleAudience) ? (payload.audience as ArticleAudience) : "public",
     publishedAt: typeof payload.published_at === "string" ? payload.published_at : null,
     hasPdf: typeof payload.pdf_url === "string" && payload.pdf_url.length > 0,
@@ -90,6 +101,14 @@ export function normalizeAdminArticle(value: unknown): AdminArticle | null {
     coverFileKey: content.coverFileKey,
     updatedAt: typeof payload.updated_at === "string" ? payload.updated_at : "",
   }
+}
+
+function readTags(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.flatMap((item) => (typeof item === "string" && item.trim() ? [item.trim().toLowerCase()] : []))
 }
 
 function readContent(value: ArticleContentPayload | undefined) {
@@ -102,7 +121,9 @@ function readContent(value: ArticleContentPayload | undefined) {
 
 export interface ArticleDraftInput {
   slug: string
+  contentType: ArticleContentType
   audience: ArticleAudience
+  tags: string[]
   title: string
   summary: string
   markdown: string
@@ -132,7 +153,9 @@ export function normalizeAdminArticleDetail(value: unknown): AdminArticleDetail 
     id: payload.id,
     slug: payload.slug,
     status: payload.status as ArticleStatus,
+    contentType: readContentType(payload.content_type),
     audience: audiences.has(payload.audience as ArticleAudience) ? (payload.audience as ArticleAudience) : "public",
+    tags: readTags(payload.tags),
     publishedAt: typeof payload.published_at === "string" ? payload.published_at : null,
     hasPdf: typeof payload.pdf_url === "string" && payload.pdf_url.length > 0,
     slugLocked: Boolean(payload.publication),

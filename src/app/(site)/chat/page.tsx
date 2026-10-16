@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function ChatPage() {
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
+    <div className="mx-auto flex h-[calc(100dvh-126px)] min-h-0 w-full max-w-6xl overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
       <ChatPanel />
     </div>
   )

@@ -1,16 +1,24 @@
 "use client"
 
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/sonner"
+import { NotifyHost } from "@/features/admin/components/notify"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { AdminHeader } from "@/features/admin/components/admin-header"
+import { AdminHeader, EditorActionsSlotProvider } from "@/features/admin/components/admin-header"
 import { AdminSidebar } from "@/features/admin/components/admin-sidebar"
 import { cn } from "@/lib/utils"
 
 export function AdminShell({ children, defaultOpen }: { children: ReactNode; defaultOpen: boolean }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark")
+  const [editorActionsSlot, setEditorActionsSlot] = useState<HTMLDivElement | null>(null)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
 
   useEffect(() => {
     const root = document.body
@@ -24,20 +32,31 @@ export function AdminShell({ children, defaultOpen }: { children: ReactNode; def
 
   return (
     <TooltipProvider>
-      <SidebarProvider
-        defaultOpen={defaultOpen}
-        className={cn("admin-theme min-h-svh bg-background", theme === "dark" && "dark")}
-      >
-        <AdminSidebar />
-        <SidebarInset className="min-w-0 bg-background">
-          <AdminHeader
-            theme={theme}
-            onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-          />
-          <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">{children}</div>
-        </SidebarInset>
-      </SidebarProvider>
-      <Toaster theme={theme} position="top-center" offset={{ top: "4.5rem" }} />
+      <EditorActionsSlotProvider slot={editorActionsSlot}>
+        <SidebarProvider
+          defaultOpen={defaultOpen}
+          className={cn("admin-theme min-h-svh bg-background", theme === "dark" && "dark")}
+        >
+          <AdminSidebar />
+          <SidebarInset className="min-w-0 bg-background">
+            <AdminHeader
+              theme={theme}
+              actionsSlotRef={setEditorActionsSlot}
+              onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+            />
+            <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">{children}</div>
+          </SidebarInset>
+        </SidebarProvider>
+      </EditorActionsSlotProvider>
+      {mounted
+        ? createPortal(
+            <>
+              <Toaster theme={theme} position="top-center" visibleToasts={5} expand offset={{ top: "4.5rem" }} />
+              <NotifyHost />
+            </>,
+            document.body,
+          )
+        : null}
     </TooltipProvider>
   )
 }

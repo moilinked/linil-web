@@ -5,16 +5,11 @@ import { useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { notifyFailure, notifySuccess } from "@/features/admin/components/notify"
 import { createAdminArticle, saveAdminArticleDraft } from "@/features/admin/articles/articles-api"
 import type { AdminArticleDetail, ArticleAudience } from "@/features/admin/articles/types"
 
@@ -32,7 +27,6 @@ export function CreateNoteButton() {
   const [title, setTitle] = useState("")
   const [slug, setSlug] = useState("")
   const [audience, setAudience] = useState<ArticleAudience | null>(null)
-  const [error, setError] = useState("")
   const [isCreating, setIsCreating] = useState(false)
   const createdRef = useRef<AdminArticleDetail | null>(null)
 
@@ -40,7 +34,6 @@ export function CreateNoteButton() {
     setTitle("")
     setSlug("")
     setAudience(null)
-    setError("")
     createdRef.current = null
   }
 
@@ -49,20 +42,19 @@ export function CreateNoteButton() {
     const nextTitle = title.trim()
     const nextSlug = slug.trim().toLowerCase()
     if (!nextTitle || [...nextTitle].length > 200) {
-      setError("标题必填，且不能超过 200 个字符。")
+      notifyFailure("创建失败", "标题必填，且不能超过 200 个字符。")
       return
     }
     if (!nextSlug || !slugPattern.test(nextSlug) || nextSlug.length > 200) {
-      setError("唯一标识必填，只能包含小写字母、数字和连字符。")
+      notifyFailure("创建失败", "唯一标识必填，只能包含小写字母、数字和连字符。")
       return
     }
     if (!audience) {
-      setError("权限必填。")
+      notifyFailure("创建失败", "权限必填。")
       return
     }
 
     setIsCreating(true)
-    setError("")
 
     let created = false
 
@@ -71,7 +63,9 @@ export function CreateNoteButton() {
       createdRef.current = article
       await saveAdminArticleDraft(article.id, {
         slug: article.slug,
+        contentType: "markdown",
         audience,
+        tags: [],
         title: nextTitle,
         summary: "",
         markdown: "",
@@ -79,9 +73,10 @@ export function CreateNoteButton() {
         expectedVersion: article.draft.version,
       })
       created = true
+      notifySuccess("创建成功")
       router.push(`/admin/notes/${article.id}`)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "新建失败")
+      notifyFailure("创建失败", requestError instanceof Error ? requestError.message : "新建失败")
     } finally {
       if (!created) {
         setIsCreating(false)
@@ -154,11 +149,6 @@ export function CreateNoteButton() {
                 </SelectContent>
               </Select>
             </div>
-            {error ? (
-              <p className="text-sm text-destructive" role="alert">
-                {error}
-              </p>
-            ) : null}
             <DialogFooter>
               <Button type="button" variant="outline" disabled={isCreating} onClick={() => setOpen(false)}>
                 取消

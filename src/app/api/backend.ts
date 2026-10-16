@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { backendConfigName, getBackendBaseUrl, type BackendService } from "@/config/api"
-import { clearAuthCookies, requireAccessToken } from "@/features/auth/session"
+import { clearAuthCookies, readOptionalAccessToken, requireAccessToken } from "@/features/auth/session"
 
 interface ProxyAuthenticatedRequestInit {
   method?: string
@@ -98,5 +98,45 @@ export async function proxyAuthenticatedRequest(
     }
 
     return NextResponse.json({ error: connectionErrors[service] }, { status: 502 })
+  }
+}
+
+export async function proxyPublicSiteRequest(request: Request, pathname: string) {
+  const resolved = resolveBackendUrl("site", pathname)
+  if (!resolved.ok) {
+    return resolved.error
+  }
+
+  const token = await readOptionalAccessToken()
+
+  try {
+    const response = await fetch(resolved.url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
+      signal: request.signal,
+    })
+
+    if (response.status === 401 && token) {
+      await clearAuthCookies()
+    }
+
+    const responseBody = bodilessStatuses.has(response.status) ? null : await response.text()
+    return new NextResponse(responseBody, {
+      status: response.status,
+      headers: {
+        "Content-Type": response.headers.get("Content-Type") || "application/json",
+        "Cache-Control": "no-store",
+      },
+    })
+  } catch {
+    if (request.signal.aborted) {
+      return new Response(null, { status: 499 })
+    }
+
+    return NextResponse.json({ error: connectionErrors.site }, { status: 502 })
   }
 }

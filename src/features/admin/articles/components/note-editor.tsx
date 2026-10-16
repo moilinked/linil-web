@@ -1,20 +1,13 @@
 "use client"
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import { ArrowLeft, ChevronDownIcon, LoaderCircle, Upload } from "lucide-react"
-import { toast } from "sonner"
-
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field as DateField, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,11 +22,16 @@ import {
   unpublishAdminArticle,
   updateAdminArticlePublishedAt,
 } from "@/features/admin/articles/articles-api"
-import type { AdminArticleDetail, ArticleAudience } from "@/features/admin/articles/types"
+import type { AdminArticleDetail, ArticleAudience, ArticleContentType } from "@/features/admin/articles/types"
+import { useEditorActionsSlot } from "@/features/admin/components/admin-header"
+import { notifyFailure, notifySuccess } from "@/features/admin/components/notify"
+import { NoteTagsField } from "@/features/admin/articles/components/note-tags-field"
+import { sameTags } from "@/features/admin/articles/tags"
 import { fileUrl, uploadFile } from "@/features/admin/files/files-api"
 import { isPreviewableImage } from "@/features/admin/files/types"
 import { formatDate } from "@/lib/datetime"
 
+const noteEditorFormId = "note-editor-form"
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const maxMarkdownBytes = 1024 * 1024
 
@@ -42,6 +40,14 @@ const audiences: { label: string; value: ArticleAudience }[] = [
   { label: "users", value: "user" },
   { label: "admin", value: "admin" },
 ]
+
+function markdownToSave(contentType: ArticleContentType, edited: string, saved: string) {
+  if (contentType === "markdown") {
+    return edited
+  }
+
+  return saved.trim() ? saved : ""
+}
 
 function isCoverImage(file: File) {
   return file.type !== "image/svg+xml" && (isPreviewableImage(file.name) || file.type.startsWith("image/"))
@@ -144,7 +150,9 @@ interface NoteForm {
   article: AdminArticleDetail | null
   title: string
   slug: string
+  contentType: ArticleContentType
   audience: ArticleAudience
+  tags: string[]
   summary: string
   markdown: string
   coverFileKey: string
@@ -158,7 +166,9 @@ const emptyForm: NoteForm = {
   article: null,
   title: "",
   slug: "",
+  contentType: "markdown",
   audience: "public",
+  tags: [],
   summary: "",
   markdown: "",
   coverFileKey: "",
@@ -176,7 +186,9 @@ function formFromArticle(next: AdminArticleDetail): NoteForm {
     article: next,
     title: next.draft.title,
     slug: next.slug,
+    contentType: next.contentType,
     audience: next.audience,
+    tags: next.tags,
     summary: next.draft.summary,
     markdown: next.draft.markdown,
     coverFileKey: next.draft.coverFileKey,
@@ -232,7 +244,9 @@ export function NoteEditor({ articleId }: { articleId: string }) {
     article,
     title,
     slug,
+    contentType,
     audience,
+    tags,
     summary,
     markdown,
     coverFileKey,
@@ -250,6 +264,7 @@ export function NoteEditor({ articleId }: { articleId: string }) {
   const [pendingAction, setPendingAction] = useState("")
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
+  const editorActionsSlot = useEditorActionsSlot()
 
   function updateForm(patch: Partial<NoteForm>) {
     setForm((current) => ({ ...current, ...patch }))
@@ -304,7 +319,9 @@ export function NoteEditor({ articleId }: { articleId: string }) {
     article !== null &&
     (title !== article.draft.title ||
       slug !== article.slug ||
+      contentType !== article.contentType ||
       audience !== article.audience ||
+      !sameTags(tags, article.tags) ||
       summary !== article.draft.summary ||
       markdown !== article.draft.markdown ||
       !isSamePublishTime(article.publishedAt, publishDate, publishTime))
@@ -318,7 +335,12 @@ export function NoteEditor({ articleId }: { articleId: string }) {
     try {
       await task()
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "The request failed")
+      const message = requestError instanceof Error ? requestError.message : "The request failed"
+      if (action === "save") {
+        notifyFailure("保存失败", message)
+      } else {
+        setError(message)
+      }
     } finally {
       setPendingAction("")
     }
@@ -335,11 +357,28 @@ export function NoteEditor({ articleId }: { articleId: string }) {
     if ([...summary.trim()].length > 1000) {
       return "Summary must be 1000 characters or fewer."
     }
-    if (new TextEncoder().encode(markdown).byteLength > maxMarkdownBytes) {
+    if (contentType === "frontend" && article?.draft.markdown.trim()) {
+      return "已有 Markdown 不会被修改。"
+    }
+    if (contentType === "markdown" && new TextEncoder().encode(markdown).byteLength > maxMarkdownBytes) {
       return "Markdown must be 1 MiB or smaller."
     }
 
     return ""
+  }
+
+  function draftInput(coverKey: string) {
+    return {
+      slug: slug.trim().toLowerCase(),
+      contentType,
+      audience,
+      tags,
+      title: title.trim(),
+      summary: summary.trim(),
+      markdown: markdownToSave(contentType, markdown, article?.draft.markdown ?? ""),
+      coverFileKey: coverKey,
+      expectedVersion: article?.draft.version ?? 1,
+    }
   }
 
   if (isLoading) {
@@ -375,6 +414,11 @@ export function NoteEditor({ articleId }: { articleId: string }) {
             {article.status === "published" ? "Published" : "Draft"}
           </Badge>
         </div>
+        {error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
       </div>
 
       {locked ? (
@@ -384,19 +428,28 @@ export function NoteEditor({ articleId }: { articleId: string }) {
       ) : null}
 
       <form
-        className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]"
+        id={noteEditorFormId}
+        className="grid grid-cols-[minmax(0,1fr)_20rem] items-start gap-8"
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && event.target instanceof HTMLElement && event.target.id === "note-tags") {
+            event.preventDefault()
+          }
+        }}
         onSubmit={(event) => {
           event.preventDefault()
+          if (document.activeElement instanceof HTMLElement && document.activeElement.id === "note-tags") {
+            return
+          }
           const validationError = validateDraft()
           if (validationError) {
-            setError(validationError)
+            notifyFailure("保存失败", validationError)
             return
           }
 
           const hasPublishInput = Boolean(publishDate) || publishTime !== ""
           const nextPublishedAt = publishDate ? combinePublishTime(publishDate, publishTime) : null
           if (hasPublishInput && !nextPublishedAt) {
-            setError("Choose a publish time.")
+            notifyFailure("保存失败", "Choose a publish time.")
             return
           }
 
@@ -405,15 +458,7 @@ export function NoteEditor({ articleId }: { articleId: string }) {
             if (coverFile) {
               key = (await uploadFile(coverFile)).key
             }
-            let saved = await saveAdminArticleDraft(article.id, {
-              slug: slug.trim().toLowerCase(),
-              audience,
-              title: title.trim(),
-              summary: summary.trim(),
-              markdown,
-              coverFileKey: key,
-              expectedVersion: article.draft.version,
-            })
+            let saved = await saveAdminArticleDraft(article.id, draftInput(key))
             if (nextPublishedAt && !isSamePublishTime(article.publishedAt, publishDate, publishTime)) {
               try {
                 saved = await updateAdminArticlePublishedAt(article.id, nextPublishedAt.toISOString())
@@ -423,7 +468,7 @@ export function NoteEditor({ articleId }: { articleId: string }) {
               }
             }
             applyArticle(saved)
-            toast.success("Draft saved.")
+            notifySuccess("保存成功")
           })
         }}
       >
@@ -444,17 +489,37 @@ export function NoteEditor({ articleId }: { articleId: string }) {
               onChange={(event) => updateForm({ summary: event.target.value })}
             />
           </Field>
+          <Field label="Content type" htmlFor="note-content-type">
+            <Select
+              value={contentType}
+              disabled={locked}
+              onValueChange={(value) => {
+                if (value === "markdown" || value === "frontend") {
+                  updateForm({ contentType: value })
+                }
+              }}
+            >
+              <SelectTrigger id="note-content-type" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="markdown">markdown</SelectItem>
+                <SelectItem value="frontend">frontend</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
           <Field label="Markdown" htmlFor="note-markdown">
             <Textarea
               id="note-markdown"
               value={markdown}
-              disabled={locked}
+              disabled={locked || contentType !== "markdown"}
               className="min-h-72 font-mono"
               onChange={(event) => updateForm({ markdown: event.target.value })}
             />
+            <p className="text-sm text-muted-foreground">frontend 只管理权限。已有 Markdown 不会被改写。</p>
           </Field>
         </div>
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-20 lg:max-h-[calc(100svh-6rem)] lg:overflow-y-auto lg:border-s lg:ps-6">
+        <aside className="sticky top-20 flex max-h-[calc(100svh-6rem)] flex-col gap-4 overflow-y-auto border-s ps-6">
           <Field label="Cover" htmlFor="note-cover">
             <input
               id="note-cover"
@@ -523,6 +588,14 @@ export function NoteEditor({ articleId }: { articleId: string }) {
               </SelectContent>
             </Select>
           </Field>
+          <Field label="Tags" htmlFor="note-tags">
+            <NoteTagsField
+              id="note-tags"
+              tags={tags}
+              disabled={locked}
+              onChange={(nextTags) => updateForm({ tags: nextTags })}
+            />
+          </Field>
           <DateField>
             <FieldLabel htmlFor="note-published-date">Date</FieldLabel>
             <Popover open={publishDateOpen} onOpenChange={setPublishDateOpen}>
@@ -574,107 +647,110 @@ export function NoteEditor({ articleId }: { articleId: string }) {
               onChange={(event) => updateForm({ slug: event.target.value })}
             />
           </Field>
-          <div className="flex flex-col gap-2">
-            <Button type="submit" className="w-full" disabled={locked || pendingAction !== ""}>
-              {pendingAction === "save" ? "Saving…" : "Save draft"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              disabled={pendingAction !== "" || !markdown.trim()}
-              onClick={() =>
-                void runAction("preview", async () => {
-                  setPreviewHtml(await previewAdminArticle(article.id, markdown))
-                  setPreviewOpen(true)
-                })
-              }
-            >
-              {pendingAction === "preview" ? "Previewing…" : "Preview"}
-            </Button>
-            {locked ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                disabled={pendingAction !== ""}
-                onClick={() =>
-                  void runAction("unpublish", async () => {
-                    applyArticle(await unpublishAdminArticle(article.id))
-                    setMessage("Note unpublished.")
-                  })
-                }
-              >
-                {pendingAction === "unpublish" ? "Unpublishing…" : "Unpublish"}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                className="w-full"
-                disabled={
-                  pendingAction !== "" || fieldsDirty || !article.publishedAt || !title.trim() || !markdown.trim()
-                }
-                onClick={() => {
-                  const hasPublishInput = Boolean(publishDate) || publishTime !== ""
-                  const nextPublishedAt = publishDate ? combinePublishTime(publishDate, publishTime) : null
-                  if (coverDirty) {
-                    const validationError = validateDraft()
-                    if (validationError) {
-                      setError(validationError)
-                      return
-                    }
-                    if (hasPublishInput && !nextPublishedAt) {
-                      setError("Choose a publish time.")
-                      return
-                    }
-                  }
-
-                  void runAction("publish", async () => {
-                    let current = article
-                    if (coverFile) {
-                      const key = (await uploadFile(coverFile)).key
-                      let saved = await saveAdminArticleDraft(article.id, {
-                        slug: slug.trim().toLowerCase(),
-                        audience,
-                        title: title.trim(),
-                        summary: summary.trim(),
-                        markdown,
-                        coverFileKey: key,
-                        expectedVersion: article.draft.version,
+          {editorActionsSlot
+            ? createPortal(
+                <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-zinc-950 p-1 text-white shadow-lg">
+                  <Button
+                    type="submit"
+                    form={noteEditorFormId}
+                    size="sm"
+                    className="rounded-full bg-zinc-800 text-white hover:bg-zinc-700"
+                    disabled={locked || pendingAction !== ""}
+                  >
+                    {pendingAction === "save" ? "Saving…" : "Save draft"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-full bg-zinc-800 text-white hover:bg-zinc-700"
+                    disabled={pendingAction !== "" || contentType !== "markdown" || !markdown.trim()}
+                    onClick={() =>
+                      void runAction("preview", async () => {
+                        setPreviewHtml(await previewAdminArticle(article.id, markdown))
+                        setPreviewOpen(true)
                       })
-                      if (nextPublishedAt && !isSamePublishTime(article.publishedAt, publishDate, publishTime)) {
-                        try {
-                          saved = await updateAdminArticlePublishedAt(article.id, nextPublishedAt.toISOString())
-                        } catch (requestError) {
-                          applyArticle(saved)
-                          throw requestError
+                    }
+                  >
+                    {pendingAction === "preview" ? "Previewing…" : "Preview"}
+                  </Button>
+                  {locked ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="rounded-full bg-white text-zinc-950 hover:bg-zinc-200"
+                      disabled={pendingAction !== ""}
+                      onClick={() =>
+                        void runAction("unpublish", async () => {
+                          applyArticle(await unpublishAdminArticle(article.id))
+                          setMessage("Note unpublished.")
+                        })
+                      }
+                    >
+                      {pendingAction === "unpublish" ? "Unpublishing…" : "Unpublish"}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="rounded-full bg-white text-zinc-950 hover:bg-zinc-200"
+                      disabled={
+                        pendingAction !== "" ||
+                        fieldsDirty ||
+                        !article.publishedAt ||
+                        !title.trim() ||
+                        (contentType === "markdown" && !markdown.trim())
+                      }
+                      onClick={() => {
+                        const hasPublishInput = Boolean(publishDate) || publishTime !== ""
+                        const nextPublishedAt = publishDate ? combinePublishTime(publishDate, publishTime) : null
+                        if (coverDirty) {
+                          const validationError = validateDraft()
+                          if (validationError) {
+                            setError(validationError)
+                            return
+                          }
+                          if (hasPublishInput && !nextPublishedAt) {
+                            setError("Choose a publish time.")
+                            return
+                          }
                         }
-                      }
-                      current = saved
-                    }
-                    try {
-                      current = await publishAdminArticle(current.id)
-                    } catch (requestError) {
-                      if (current !== article) {
-                        applyArticle(current)
-                      }
-                      throw requestError
-                    }
-                    applyArticle(current)
-                    setMessage("Note published.")
-                  })
-                }}
-              >
-                {pendingAction === "publish" ? "Publishing…" : "Publish"}
-              </Button>
-            )}
-          </div>
+
+                        void runAction("publish", async () => {
+                          let current = article
+                          if (coverFile) {
+                            const key = (await uploadFile(coverFile)).key
+                            let saved = await saveAdminArticleDraft(article.id, draftInput(key))
+                            if (nextPublishedAt && !isSamePublishTime(article.publishedAt, publishDate, publishTime)) {
+                              try {
+                                saved = await updateAdminArticlePublishedAt(article.id, nextPublishedAt.toISOString())
+                              } catch (requestError) {
+                                applyArticle(saved)
+                                throw requestError
+                              }
+                            }
+                            current = saved
+                          }
+                          try {
+                            current = await publishAdminArticle(current.id)
+                          } catch (requestError) {
+                            if (current !== article) {
+                              applyArticle(current)
+                            }
+                            throw requestError
+                          }
+                          applyArticle(current)
+                          setMessage("Note published.")
+                        })
+                      }}
+                    >
+                      {pendingAction === "publish" ? "Publishing…" : "Publish"}
+                    </Button>
+                  )}
+                </div>,
+                editorActionsSlot,
+              )
+            : null}
           {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
         </aside>
       </form>
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
@@ -684,10 +760,7 @@ export function NoteEditor({ articleId }: { articleId: string }) {
             <DialogDescription className="sr-only">Rendered note preview</DialogDescription>
           </DialogHeader>
           {previewHtml ? (
-            <div
-              className="max-h-[70vh] overflow-y-auto text-sm [&_a]:underline [&_h1]:mb-3 [&_h1]:text-2xl [&_h2]:mb-2 [&_h2]:text-xl [&_p]:my-3"
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
+            <div className="note-body max-h-[70vh] overflow-y-auto" dangerouslySetInnerHTML={{ __html: previewHtml }} />
           ) : (
             <p className="text-sm text-muted-foreground">Nothing to preview.</p>
           )}

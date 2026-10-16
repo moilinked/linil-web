@@ -2,7 +2,7 @@ import { siteConfig } from "@/config/site"
 
 export function SiteFooter() {
   return (
-    <footer className="shrink-0 px-3 py-2 sm:px-6">
+    <footer className="px-3 py-2 sm:px-6">
       <p className="text-center text-xs text-muted-foreground">
         <a
           href={siteConfig.beian.href}

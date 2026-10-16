@@ -50,6 +50,19 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-reveal: reveal 1500ms cubic-bezier(0.645, 0.045, 0.355, 1) infinite alternate;
+
+  @keyframes reveal {
+    0%,
+    100% {
+      opacity: 0.5;
+      letter-spacing: -1em;
+    }
+    50% {
+      opacity: 1;
+      letter-spacing: 0em;
+    }
+  }
 }
 
 :root {
@@ -269,7 +282,192 @@ body.admin-theme .page-decor {
   display: none;
 }
 
+.note-body {
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.75rem;
+}
+
+.note-body a {
+  text-decoration: underline;
+}
+
+.note-body blockquote {
+  margin-block: 1rem;
+  border-inline-start: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--muted);
+  padding: 0.75rem 1rem;
+  color: var(--muted-foreground);
+}
+
+.note-body blockquote p:first-child {
+  margin-top: 0;
+}
+
+.note-body blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.note-body h1 {
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+}
+
+.note-body h2 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+.note-body h3 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+.note-body img {
+  margin-block: 1rem;
+  max-width: 100%;
+  border-radius: var(--radius-xl);
+}
+
+.note-body li {
+  margin-block: 0.25rem;
+}
+
+.note-body ol {
+  margin-block: 0.75rem;
+  list-style: decimal;
+  padding-inline-start: 1.25rem;
+}
+
+.note-body p {
+  margin-block: 0.75rem;
+}
+
+.note-body :not(pre) > code {
+  border-radius: 0.25rem;
+  background: var(--muted);
+  padding-inline: 0.25rem;
+  font-family: var(--font-mono);
+}
+
+.note-body pre {
+  margin-block: 1rem;
+  overflow-x: auto;
+  border-radius: var(--radius-xl);
+  background: var(--muted);
+  padding: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5rem;
+}
+
+.note-body pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.note-body table {
+  margin-block: 1rem;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.note-body td,
+.note-body th {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+}
+
+.note-body th {
+  text-align: start;
+}
+
+.note-body ul {
+  margin-block: 0.75rem;
+  list-style: disc;
+  padding-inline-start: 1.25rem;
+}
+
+/* The public site stays dark, so note code uses github-dark unless it sits in the light admin theme. */
+.note-body .shiki,
+.note-body .shiki span {
+  color: var(--shiki-dark);
+  background-color: transparent;
+  font-style: var(--shiki-dark-font-style);
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
+}
+
+.admin-theme:not(.dark) .note-body .shiki,
+.admin-theme:not(.dark) .note-body .shiki span {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+}
+
+.note-body pre.shiki,
+.note-body pre.shiki code {
+  display: block;
+  font-size: 0;
+  line-height: 0;
+}
+
+.note-body .shiki .line {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 1lh;
+}
+
+.note-body .note-code {
+  margin-block: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--muted);
+}
+
+.note-body .note-code[data-language]::before {
+  content: attr(data-language);
+  display: block;
+  border-bottom: 1px solid var(--border);
+  padding: 0.45rem 0.85rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: end;
+  text-transform: lowercase;
+}
+
+.note-body .note-code pre {
+  margin: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 .admin-theme button:not(:disabled),
 .admin-theme [role="button"]:not(:disabled) {
   cursor: pointer;
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
 }

@@ -6,7 +6,7 @@ import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsCompact, useIsMobile } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -57,15 +57,32 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void
 }) {
   const isMobile = useIsMobile()
+  const isCompactViewport = useIsCompact()
+  const compactLayout = isCompactViewport && !isMobile
   const [openMobile, setOpenMobile] = React.useState(false)
+  const [trackedCompactLayout, setTrackedCompactLayout] = React.useState(compactLayout)
+  const [expandedWhileCompact, setExpandedWhileCompact] = React.useState(false)
+
+  if (compactLayout !== trackedCompactLayout) {
+    setTrackedCompactLayout(compactLayout)
+    if (compactLayout) {
+      setExpandedWhileCompact(false)
+    }
+  }
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen)
-  const open = openProp ?? _open
+  const storedOpen = openProp ?? _open
+  const open = compactLayout ? expandedWhileCompact : storedOpen
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value
+      if (compactLayout) {
+        setExpandedWhileCompact(openState)
+        return
+      }
+
       if (setOpenProp) {
         setOpenProp(openState)
       } else {
@@ -75,7 +92,7 @@ function SidebarProvider({
       // This sets the cookie to keep the sidebar state.
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
     },
-    [setOpenProp, open],
+    [compactLayout, setOpenProp, open],
   )
 
   // Helper to toggle the sidebar.

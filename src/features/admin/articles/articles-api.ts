@@ -109,7 +109,9 @@ export async function saveAdminArticleDraft(id: string, draft: ArticleDraftInput
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       slug: draft.slug,
+      content_type: draft.contentType,
       audience: draft.audience,
+      tags: draft.tags,
       title: draft.title,
       summary: draft.summary,
       markdown: draft.markdown,

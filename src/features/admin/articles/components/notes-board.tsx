@@ -278,6 +278,7 @@ function NoteCard({ note, onDelete }: { note: AdminArticle; onDelete: (note: Adm
   const [coverFailed, setCoverFailed] = useState(false)
   const title = note.title || "Untitled"
   const showCover = Boolean(note.coverFileKey) && !coverFailed
+  const publishedAt = formatDate(note.publishedAt)
 
   return (
     <div className="relative h-full">
@@ -318,9 +319,10 @@ function NoteCard({ note, onDelete }: { note: AdminArticle; onDelete: (note: Adm
                 </Badge>
               ) : null}
             </div>
-            <time className="shrink-0 text-xs text-muted-foreground" dateTime={note.updatedAt}>
-              {formatUpdatedAt(note.updatedAt)}
-            </time>
+            <div className="flex shrink-0 flex-col items-end gap-1 text-xs text-muted-foreground">
+              <time dateTime={note.updatedAt}>更新 {formatUpdatedAt(note.updatedAt)}</time>
+              {note.publishedAt && publishedAt ? <time dateTime={note.publishedAt}>发布 {publishedAt}</time> : null}
+            </div>
           </CardFooter>
         </Card>
       </Link>

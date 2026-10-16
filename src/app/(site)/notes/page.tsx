@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 
-import { ContentPlaceholder } from "@/components/content/content-placeholder"
+import { NotesList } from "@/features/notes/components/notes-list"
 
 export const metadata: Metadata = {
   title: "Notes",
@@ -9,10 +9,12 @@ export const metadata: Metadata = {
 
 export default function NotesPage() {
   return (
-    <ContentPlaceholder
-      eyebrow="Notes"
-      title="Learning Notes"
-      description="This space will organize development practices, AI agent concepts, and project learnings. The content system will be added after the Chat MVP is complete."
-    />
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+      <div className="max-w-2xl">
+        <p className="text-sm font-medium text-muted-foreground">Notes</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Learning Notes</h1>
+      </div>
+      <NotesList />
+    </div>
   )
 }

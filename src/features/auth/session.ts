@@ -69,6 +69,23 @@ export async function getSessionUser(): Promise<AuthUser | null> {
   return readSessionUser(cookieStore.get(AUTH_TOKEN_COOKIE_NAME)?.value, cookieStore.get(AUTH_COOKIE_NAME)?.value)
 }
 
+export async function readOptionalAccessToken() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(AUTH_TOKEN_COOKIE_NAME)?.value
+  const sessionValue = cookieStore.get(AUTH_COOKIE_NAME)?.value
+
+  if (!token && !sessionValue) {
+    return null
+  }
+
+  if (isAuthSessionUnusable(token, sessionValue)) {
+    await clearAuthCookies()
+    return null
+  }
+
+  return token ?? null
+}
+
 export async function requireAccessToken(): Promise<
   { ok: true; token: string } | { ok: false; response: NextResponse }
 > {
