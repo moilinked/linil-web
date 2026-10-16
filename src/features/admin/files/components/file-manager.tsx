@@ -81,6 +81,7 @@ export function FileManager() {
   const inputRef = useRef<HTMLInputElement>(null)
   const preservePageRef = useRef<{ page: number; pageSize: number } | null>(null)
   const searchTimerRef = useRef<number | null>(null)
+  const copiedTimerRef = useRef<number | null>(null)
   const committedSearchRef = useRef("")
 
   const clearSearchTimer = useCallback(() => {
@@ -111,6 +112,14 @@ export function FileManager() {
   }, [])
 
   useEffect(() => clearSearchTimer, [clearSearchTimer])
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current !== null) {
+        window.clearTimeout(copiedTimerRef.current)
+      }
+    }
+  }, [])
 
   function handleSearchChange(value: string) {
     setSearchDraft(value)
@@ -244,6 +253,13 @@ export function FileManager() {
     try {
       await navigator.clipboard.writeText(new URL(fileUrl(file.key), window.location.origin).toString())
       setCopiedKey(file.key)
+      if (copiedTimerRef.current !== null) {
+        window.clearTimeout(copiedTimerRef.current)
+      }
+      copiedTimerRef.current = window.setTimeout(() => {
+        copiedTimerRef.current = null
+        setCopiedKey((current) => (current === file.key ? "" : current))
+      }, 3000)
     } catch {
       setError("The browser blocked clipboard access")
     }
