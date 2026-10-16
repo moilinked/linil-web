@@ -57,7 +57,7 @@ export function NotesBoard() {
   const [error, setError] = useState("")
   const [searchDraft, setSearchDraft] = useState("")
   const [search, setSearch] = useState("")
-  const [sort, setSort] = useState<ArticleSort>("published_at")
+  const [sort, setSort] = useState<ArticleSort>("created_at")
   const [order, setOrder] = useState<ArticleSortOrder>("desc")
   const [pendingDelete, setPendingDelete] = useState<AdminArticle | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)

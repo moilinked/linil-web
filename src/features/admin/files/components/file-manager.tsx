@@ -76,7 +76,7 @@ export function FileManager() {
   const [reloadToken, setReloadToken] = useState(0)
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(10)
-  const [sortKey, setSortKey] = useState<FileSort | null>(null)
+  const [sortKey, setSortKey] = useState<FileSort | null>("last_modified")
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc")
   const inputRef = useRef<HTMLInputElement>(null)
   const preservePageRef = useRef<{ page: number; pageSize: number } | null>(null)
