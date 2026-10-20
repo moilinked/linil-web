@@ -103,19 +103,42 @@ export async function getAdminArticle(id: string, signal?: AbortSignal) {
   return readArticle(response, "Failed to load the note")
 }
 
+export async function saveAdminArticleSettings(
+  id: string,
+  settings: { slug: string; audience: ArticleAudience; tags: string[]; expectedVersion: number },
+) {
+  const response = await fetch(`/api/admin/articles/${id}/draft`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      slug: settings.slug,
+      audience: settings.audience,
+      tags: settings.tags,
+      expected_version: settings.expectedVersion,
+    }),
+  })
+
+  return readArticle(response, "Failed to save the note")
+}
+
+function presentText(value: string) {
+  const trimmed = value.trim()
+  return trimmed ? trimmed : undefined
+}
+
 export async function saveAdminArticleDraft(id: string, draft: ArticleDraftInput): Promise<AdminArticleDetail> {
   const response = await fetch(`/api/admin/articles/${id}/draft`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      slug: draft.slug,
-      content_type: draft.contentType,
-      audience: draft.audience,
+      slug: presentText(draft.slug)?.toLowerCase(),
+      content_type: draft.contentType || undefined,
+      audience: draft.audience || undefined,
       tags: draft.tags,
-      title: draft.title,
-      summary: draft.summary,
-      markdown: draft.markdown,
-      cover_file_key: draft.coverFileKey,
+      title: presentText(draft.title),
+      summary: presentText(draft.summary),
+      markdown: draft.markdown.trim() ? draft.markdown : undefined,
+      cover_file_key: presentText(draft.coverFileKey),
       expected_version: draft.expectedVersion,
     }),
   })

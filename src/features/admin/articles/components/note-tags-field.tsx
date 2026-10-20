@@ -11,12 +11,12 @@ import { maxTagCount, maxTagLength, normalizeTag, presetTags, tagLabel } from "@
 export function NoteTagsField({
   id,
   tags,
-  disabled,
+  disabled = false,
   onChange,
 }: {
   id: string
   tags: string[]
-  disabled: boolean
+  disabled?: boolean
   onChange: (tags: string[]) => void
 }) {
   const [draft, setDraft] = useState("")
@@ -73,24 +73,6 @@ export function NoteTagsField({
           ))}
         </div>
       ) : null}
-      <div className="flex flex-wrap gap-1.5">
-        {presetTags.map((tag) => {
-          const selected = tags.includes(tag.value)
-          return (
-            <Button
-              key={tag.value}
-              type="button"
-              size="sm"
-              variant={selected ? "default" : "outline"}
-              aria-pressed={selected}
-              disabled={disabled || (!selected && tags.length >= maxTagCount)}
-              onClick={() => (selected ? removeTag(tag.value) : addTag(tag.value))}
-            >
-              {tag.label}
-            </Button>
-          )
-        })}
-      </div>
       <div className="flex gap-2">
         <Input
           id={id}
@@ -110,6 +92,24 @@ export function NoteTagsField({
         <Button type="button" variant="outline" disabled={disabled} onClick={() => addTag(draft)}>
           Add
         </Button>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {presetTags.map((tag) => {
+          const selected = tags.includes(tag.value)
+          return (
+            <Button
+              key={tag.value}
+              type="button"
+              size="sm"
+              variant={selected ? "default" : "outline"}
+              aria-pressed={selected}
+              disabled={disabled || (!selected && tags.length >= maxTagCount)}
+              onClick={() => (selected ? removeTag(tag.value) : addTag(tag.value))}
+            >
+              {tag.label}
+            </Button>
+          )
+        })}
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>

@@ -19,6 +19,7 @@ import {
   previewAdminArticle,
   publishAdminArticle,
   saveAdminArticleDraft,
+  saveAdminArticleSettings,
   unpublishAdminArticle,
   updateAdminArticlePublishedAt,
 } from "@/features/admin/articles/articles-api"
@@ -41,12 +42,8 @@ const audiences: { label: string; value: ArticleAudience }[] = [
   { label: "admin", value: "admin" },
 ]
 
-function markdownToSave(contentType: ArticleContentType, edited: string, saved: string) {
-  if (contentType === "markdown") {
-    return edited
-  }
-
-  return saved.trim() ? saved : ""
+function markdownToSave(contentType: ArticleContentType, edited: string) {
+  return contentType === "markdown" ? edited : ""
 }
 
 function isCoverImage(file: File) {
@@ -314,7 +311,6 @@ export function NoteEditor({ articleId }: { articleId: string }) {
   }, [])
 
   const locked = article?.status === "published"
-  const slugLocked = Boolean(article?.slugLocked)
   const fieldsDirty =
     article !== null &&
     (title !== article.draft.title ||
@@ -357,7 +353,7 @@ export function NoteEditor({ articleId }: { articleId: string }) {
     if ([...summary.trim()].length > 1000) {
       return "Summary must be 1000 characters or fewer."
     }
-    if (contentType === "frontend" && article?.draft.markdown.trim()) {
+    if (!locked && contentType === "frontend" && article?.draft.markdown.trim()) {
       return "已有 Markdown 不会被修改。"
     }
     if (contentType === "markdown" && new TextEncoder().encode(markdown).byteLength > maxMarkdownBytes) {
@@ -375,9 +371,24 @@ export function NoteEditor({ articleId }: { articleId: string }) {
       tags,
       title: title.trim(),
       summary: summary.trim(),
-      markdown: markdownToSave(contentType, markdown, article?.draft.markdown ?? ""),
+      markdown: markdownToSave(contentType, markdown),
       coverFileKey: coverKey,
       expectedVersion: article?.draft.version ?? 1,
+    }
+  }
+
+  async function commitPublishedAt(current: AdminArticleDetail, publishedAt: Date | null, writeBackOnFailure: boolean) {
+    if (!article || !publishedAt || isSamePublishTime(article.publishedAt, publishDate, publishTime)) {
+      return current
+    }
+
+    try {
+      return await updateAdminArticlePublishedAt(current.id, publishedAt.toISOString())
+    } catch (requestError) {
+      if (writeBackOnFailure) {
+        applyArticle(current)
+      }
+      throw requestError
     }
   }
 
@@ -423,7 +434,7 @@ export function NoteEditor({ articleId }: { articleId: string }) {
 
       {locked ? (
         <p className="rounded-lg border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-          Unpublish this note before editing the draft.
+          Unpublish this note before editing the title, summary, content, or cover.
         </p>
       ) : null}
 
@@ -454,20 +465,30 @@ export function NoteEditor({ articleId }: { articleId: string }) {
           }
 
           void runAction("save", async () => {
+            if (locked) {
+              const settingsChanged =
+                slug.trim().toLowerCase() !== article.slug ||
+                audience !== article.audience ||
+                !sameTags(tags, article.tags)
+              const savedSettings = settingsChanged
+                ? await saveAdminArticleSettings(article.id, {
+                    slug: slug.trim().toLowerCase(),
+                    audience,
+                    tags,
+                    expectedVersion: article.draft.version,
+                  })
+                : article
+              applyArticle(await commitPublishedAt(savedSettings, nextPublishedAt, settingsChanged))
+              notifySuccess("保存成功")
+              return
+            }
+
             let key = coverFileKey
             if (coverFile) {
               key = (await uploadFile(coverFile)).key
             }
-            let saved = await saveAdminArticleDraft(article.id, draftInput(key))
-            if (nextPublishedAt && !isSamePublishTime(article.publishedAt, publishDate, publishTime)) {
-              try {
-                saved = await updateAdminArticlePublishedAt(article.id, nextPublishedAt.toISOString())
-              } catch (requestError) {
-                applyArticle(saved)
-                throw requestError
-              }
-            }
-            applyArticle(saved)
+            const saved = await saveAdminArticleDraft(article.id, draftInput(key))
+            applyArticle(await commitPublishedAt(saved, nextPublishedAt, true))
             notifySuccess("保存成功")
           })
         }}
@@ -569,7 +590,6 @@ export function NoteEditor({ articleId }: { articleId: string }) {
           <Field label="Audience" htmlFor="note-audience">
             <Select
               value={audience}
-              disabled={locked}
               onValueChange={(value) => {
                 if (value === "public" || value === "user" || value === "admin") {
                   updateForm({ audience: value })
@@ -592,7 +612,6 @@ export function NoteEditor({ articleId }: { articleId: string }) {
             <NoteTagsField
               id="note-tags"
               tags={tags}
-              disabled={locked}
               onChange={(nextTags) => updateForm({ tags: nextTags })}
             />
           </Field>
@@ -605,7 +624,6 @@ export function NoteEditor({ articleId }: { articleId: string }) {
                     type="button"
                     variant="outline"
                     id="note-published-date"
-                    disabled={locked}
                     data-empty={!publishDate}
                     className="w-full justify-between font-normal data-[empty=true]:text-muted-foreground"
                   >
@@ -635,7 +653,6 @@ export function NoteEditor({ articleId }: { articleId: string }) {
             <TimeSelect
               id="note-published-time"
               value={publishTime}
-              disabled={locked}
               onChange={(value) => updateForm({ publishTime: value })}
             />
           </DateField>
@@ -643,7 +660,6 @@ export function NoteEditor({ articleId }: { articleId: string }) {
             <Input
               id="note-slug"
               value={slug}
-              disabled={locked || slugLocked}
               onChange={(event) => updateForm({ slug: event.target.value })}
             />
           </Field>
@@ -655,9 +671,9 @@ export function NoteEditor({ articleId }: { articleId: string }) {
                     form={noteEditorFormId}
                     size="sm"
                     className="rounded-full bg-zinc-800 text-white hover:bg-zinc-700"
-                    disabled={locked || pendingAction !== ""}
+                    disabled={pendingAction !== ""}
                   >
-                    {pendingAction === "save" ? "Saving…" : "Save draft"}
+                    {pendingAction === "save" ? "Saving…" : locked ? "Save" : "Save draft"}
                   </Button>
                   <Button
                     type="button"
@@ -719,16 +735,8 @@ export function NoteEditor({ articleId }: { articleId: string }) {
                           let current = article
                           if (coverFile) {
                             const key = (await uploadFile(coverFile)).key
-                            let saved = await saveAdminArticleDraft(article.id, draftInput(key))
-                            if (nextPublishedAt && !isSamePublishTime(article.publishedAt, publishDate, publishTime)) {
-                              try {
-                                saved = await updateAdminArticlePublishedAt(article.id, nextPublishedAt.toISOString())
-                              } catch (requestError) {
-                                applyArticle(saved)
-                                throw requestError
-                              }
-                            }
-                            current = saved
+                            const saved = await saveAdminArticleDraft(article.id, draftInput(key))
+                            current = await commitPublishedAt(saved, nextPublishedAt, true)
                           }
                           try {
                             current = await publishAdminArticle(current.id)

@@ -1,5 +1,5 @@
 export const siteConfig = {
-  name: "Aemeath",
+  name: "oilinil",
   description: "Chat Agent、Notes & Works",
   logo: "/logo3.png",
   logoKey: "oilinil-logo",

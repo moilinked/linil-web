@@ -27,15 +27,15 @@ const draftFields = new Set([
 ])
 
 export interface ArticleDraftBody {
-  slug: string
-  content_type: string
-  audience: string
-  tags: string[]
-  title: string
-  summary: string
-  markdown: string
-  cover_file_key: string
   expected_version: number
+  slug?: string
+  content_type?: string
+  audience?: string
+  tags?: string[]
+  title?: string
+  summary?: string
+  markdown?: string
+  cover_file_key?: string
 }
 
 type ParseResult<T> = { ok: true; value: T } | { ok: false; response: NextResponse }
@@ -82,31 +82,30 @@ export async function parseArticleDraft(request: Request): Promise<ParseResult<A
     return payload
   }
 
-  const slug = readOptionalString(payload.value.slug)
-  const contentType = readOptionalString(payload.value.content_type)
-  const audience = readOptionalString(payload.value.audience)
-  const tags = payload.value.tags === undefined ? [] : readTagList(payload.value.tags)
-  const title = readTrimmedString(payload.value.title)
-  const summary = readTrimmedString(payload.value.summary)
-  const markdown = readRequiredString(payload.value.markdown)
-  const coverFileKey = readCoverFileKey(payload.value.cover_file_key)
+  const slug = readPatchString(payload.value.slug)
+  const contentType = readPatchString(payload.value.content_type)
+  const audience = readPatchString(payload.value.audience)
+  const tags = readPatchTags(payload.value.tags)
+  const title = readPatchString(payload.value.title)
+  const summary = readPatchString(payload.value.summary)
+  const markdown = readPatchMarkdown(payload.value.markdown)
+  const coverFileKey = readPatchString(payload.value.cover_file_key)
   const expectedVersion = payload.value.expected_version
-
   if (
     slug === null ||
-    (slug !== "" && !isValidSlug(slug)) ||
+    (slug !== undefined && !isValidSlug(slug)) ||
     contentType === null ||
-    (contentType !== "" && !contentTypes.has(contentType)) ||
-    (contentType === "frontend" && markdown !== null && markdown.trim() !== "") ||
+    (contentType !== undefined && !contentTypes.has(contentType)) ||
+    (contentType === "frontend" && markdown !== undefined) ||
     audience === null ||
-    (audience !== "" && !audiences.has(audience)) ||
+    (audience !== undefined && !audiences.has(audience)) ||
     tags === null ||
     title === null ||
-    [...title].length > maxTitleLength ||
+    (title !== undefined && [...title].length > maxTitleLength) ||
     summary === null ||
-    [...summary].length > maxSummaryLength ||
+    (summary !== undefined && [...summary].length > maxSummaryLength) ||
     markdown === null ||
-    byteLength(markdown) > maxMarkdownBytes ||
+    (markdown !== undefined && byteLength(markdown) > maxMarkdownBytes) ||
     coverFileKey === null ||
     !isValidVersion(expectedVersion)
   ) {
@@ -116,15 +115,15 @@ export async function parseArticleDraft(request: Request): Promise<ParseResult<A
   return {
     ok: true,
     value: {
-      slug: slug.toLowerCase(),
-      content_type: contentType,
-      audience,
-      tags,
-      title,
-      summary,
-      markdown,
-      cover_file_key: coverFileKey,
       expected_version: expectedVersion,
+      ...(slug ? { slug: slug.toLowerCase() } : {}),
+      ...(contentType ? { content_type: contentType } : {}),
+      ...(audience ? { audience } : {}),
+      ...(tags ? { tags } : {}),
+      ...(title ? { title } : {}),
+      ...(summary ? { summary } : {}),
+      ...(markdown ? { markdown } : {}),
+      ...(coverFileKey ? { cover_file_key: coverFileKey } : {}),
     },
   }
 }
@@ -245,16 +244,35 @@ function readRequiredString(value: unknown) {
   return typeof value === "string" ? value : null
 }
 
-function readTrimmedString(value: unknown) {
-  return typeof value === "string" ? value.trim() : null
-}
-
-function readCoverFileKey(value: unknown) {
-  if (value === undefined) {
-    return ""
+function readPatchString(value: unknown) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+  if (typeof value !== "string") {
+    return null
   }
 
-  return typeof value === "string" ? value : null
+  const trimmed = value.trim()
+  return trimmed ? trimmed : undefined
+}
+
+function readPatchMarkdown(value: unknown) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+  if (typeof value !== "string") {
+    return null
+  }
+
+  return value.trim() ? value : undefined
+}
+
+function readPatchTags(value: unknown) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+
+  return readTagList(value)
 }
 
 function isValidSlug(value: string) {
