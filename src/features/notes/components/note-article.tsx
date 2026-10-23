@@ -51,7 +51,7 @@ function NoteCover({ fileKey }: { fileKey: string }) {
   }
 
   return (
-    <div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-muted">
+    <div className="relative aspect-video overflow-hidden rounded-xl bg-muted">
       <Image
         src={fileUrl(fileKey)}
         alt=""

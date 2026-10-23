@@ -287,7 +287,7 @@ function NoteCard({ note, onDelete }: { note: AdminArticle; onDelete: (note: Adm
         className="block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <Card className="h-full pt-0 transition-colors hover:bg-muted/30">
-          <div className="relative aspect-[16/10] bg-muted">
+          <div className="relative aspect-16/10 bg-muted">
             {showCover ? (
               <Image
                 src={fileUrl(note.coverFileKey)}

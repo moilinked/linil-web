@@ -390,7 +390,7 @@ export function FileManager() {
         onDrop={handleDrop}
         className={cn("overflow-hidden rounded-md border", isDropTarget && "border-primary")}
       >
-        <Table className="min-w-[40rem] table-fixed" aria-busy={isLoading}>
+        <Table className="min-w-160 table-fixed" aria-busy={isLoading}>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>

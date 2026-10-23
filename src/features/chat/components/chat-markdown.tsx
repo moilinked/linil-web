@@ -16,8 +16,8 @@ export const ChatMarkdown = memo(function ChatMarkdown({ content, className }: C
   return (
     <div
       className={cn(
-        "text-sm leading-6 break-words",
-        "[&>:first-child]:mt-0 [&>:last-child]:mb-0",
+        "text-sm leading-6 wrap-break-word",
+        "*:first:mt-0 *:last:mb-0",
         "[&_p]:my-3",
         "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
         "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5",

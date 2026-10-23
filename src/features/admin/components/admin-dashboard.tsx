@@ -58,7 +58,7 @@ const statCards = [
 
 function OverviewChart() {
   return (
-    <div className="flex h-[350px] gap-3">
+    <div className="flex h-87.5 gap-3">
       <div className="flex h-[calc(100%-1.25rem)] flex-col justify-between text-xs text-muted-foreground">
         <span>$6000</span>
         <span>$4500</span>
