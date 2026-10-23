@@ -13,7 +13,8 @@ import typescript from "@shikijs/langs/typescript"
 import rehypeShikiFromHighlighter from "@shikijs/rehype/core"
 import githubDark from "@shikijs/themes/github-dark"
 import githubLight from "@shikijs/themes/github-light"
-import type { Element, Root } from "hast"
+import type { Element, ElementContent, Root } from "hast"
+import katex from "katex"
 import rehypeParse from "rehype-parse"
 import rehypeStringify from "rehype-stringify"
 import remarkGfm from "remark-gfm"
@@ -75,7 +76,7 @@ export async function highlightNoteMarkdown(markdown: string) {
 }
 
 export async function highlightNoteHtml(html: string) {
-  if (!html || !html.includes("<pre")) {
+  if (!html || (!html.includes("<pre") && !html.includes("math-display") && !html.includes("math-inline"))) {
     return html
   }
 
@@ -85,7 +86,7 @@ export async function highlightNoteHtml(html: string) {
       const highlighter = await getHighlighter()
       processor.use(() => shikiPlugin(highlighter))
     }
-    const file = await processor.use(rehypeCodeCards).use(rehypeStringify).process(html)
+    const file = await processor.use(rehypeCodeCards).use(rehypeMath).use(rehypeStringify).process(html)
     return String(file)
   } catch (error) {
     console.error("Failed to highlight note HTML", error)
@@ -153,6 +154,76 @@ function codeLanguage(pre: Element) {
   const classes = Array.isArray(className) ? className.map(String) : typeof className === "string" ? [className] : []
   const languageClass = classes.find((name) => name.startsWith("language-"))
   return languageClass ? languageClass.slice("language-".length) : ""
+}
+
+function rehypeMath() {
+  return (tree: Root) => {
+    renderMath(tree)
+  }
+}
+
+function renderMath(node: Root | Element) {
+  if (node.type === "element" && renderMathElement(node)) {
+    return
+  }
+
+  for (const child of node.children) {
+    if (child.type === "element") {
+      renderMath(child)
+    }
+  }
+}
+
+function renderMathElement(node: Element) {
+  const classes = classNames(node)
+  const display = classes.includes("math-display")
+  const inline = classes.includes("math-inline")
+  if (!display && !inline) {
+    return false
+  }
+
+  const tex = readTex(textContent(node), display)
+  if (!tex) {
+    return true
+  }
+
+  try {
+    const html = katex.renderToString(tex, { displayMode: display, throwOnError: false })
+    node.children = mathChildren(html)
+  } catch (error) {
+    console.error("Failed to render math", error)
+  }
+
+  return true
+}
+
+function readTex(value: string, display: boolean) {
+  const trimmed = value.trim()
+  const wrapped = display ? /^\$\$([\s\S]*)\$\$$/ : /^\$(?!\$)([\s\S]*)\$$/
+  const match = wrapped.exec(trimmed)
+  return (match?.[1] ?? trimmed).trim()
+}
+
+function textContent(node: Element): string {
+  let value = ""
+  for (const child of node.children) {
+    if (child.type === "text") {
+      value += child.value
+    } else if (child.type === "element") {
+      value += textContent(child)
+    }
+  }
+  return value
+}
+
+function mathChildren(html: string): ElementContent[] {
+  const root = unified().use(rehypeParse, { fragment: true }).parse(html)
+  return root.children.filter((child) => child.type === "element" || child.type === "text")
+}
+
+function classNames(node: Element) {
+  const className = node.properties.className
+  return Array.isArray(className) ? className.map(String) : []
 }
 
 function rehypeExternalLinks() {
