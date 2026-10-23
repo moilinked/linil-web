@@ -7,7 +7,7 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 function Toaster({ ...props }: ToasterProps) {
   return (
     <Sonner
-      className="toaster group"
+      className="toaster group z-40!"
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,

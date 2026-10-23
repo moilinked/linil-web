@@ -157,12 +157,12 @@ export function NotifyHost() {
         }
       }}
     >
-      <DialogContent overlayClassName="z-[1000000001]" className="z-[1000000001] sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{failure?.title}</DialogTitle>
           <DialogDescription className="sr-only">失败原因</DialogDescription>
         </DialogHeader>
-        <p className="text-sm break-words whitespace-pre-wrap">{failure?.detail}</p>
+        <p className="text-sm wrap-break-word whitespace-pre-wrap">{failure?.detail}</p>
       </DialogContent>
     </Dialog>
   )
