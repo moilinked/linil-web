@@ -472,3 +472,26 @@ body.admin-theme .page-decor {
     transform: scaleX(0);
   }
 }
+
+@property --scroll-progress {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes back-to-top-progress {
+  from {
+    --scroll-progress: 0;
+  }
+
+  to {
+    --scroll-progress: 1;
+  }
+}
+
+.back-to-top {
+  animation-name: back-to-top-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: scroll(root);
+}
