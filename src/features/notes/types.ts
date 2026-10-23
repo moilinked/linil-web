@@ -11,6 +11,7 @@ export interface PublicNote {
   coverFileKey: string
   publishedAt: string
   audience: NoteAudience
+  tags: string[]
   hasPdf: boolean
 }
 
@@ -27,6 +28,14 @@ export interface PublicNoteDetail extends PublicNote {
 
 const audiences = new Set<NoteAudience>(["public", "user", "admin"])
 
+function readTags(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.flatMap((item) => (typeof item === "string" && item.trim() ? [item.trim().toLowerCase()] : []))
+}
+
 export function normalizePublicNote(value: unknown): PublicNote | null {
   if (!value || typeof value !== "object") {
     return null
@@ -40,6 +49,7 @@ export function normalizePublicNote(value: unknown): PublicNote | null {
     cover_file_key?: unknown
     published_at?: unknown
     audience?: unknown
+    tags?: unknown
     pdf_url?: unknown
   }
 
@@ -55,6 +65,7 @@ export function normalizePublicNote(value: unknown): PublicNote | null {
     coverFileKey: typeof payload.cover_file_key === "string" ? payload.cover_file_key : "",
     publishedAt: typeof payload.published_at === "string" ? payload.published_at : "",
     audience: audiences.has(payload.audience as NoteAudience) ? (payload.audience as NoteAudience) : "public",
+    tags: readTags(payload.tags),
     hasPdf: typeof payload.pdf_url === "string" && payload.pdf_url.length > 0,
   }
 }
