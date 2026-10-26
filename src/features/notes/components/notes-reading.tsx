@@ -89,8 +89,8 @@ export function NotesReading() {
         <p className="text-sm text-muted-foreground">No notes yet.</p>
       ) : (
         <div className="flex flex-col gap-4">
-          {notes.map((note, index) => (
-            <ReadingCard key={note.id} note={note} featured={index === 0} />
+          {notes.map((note) => (
+            <ReadingCard key={note.id} note={note} featured={false} />
           ))}
         </div>
       )}

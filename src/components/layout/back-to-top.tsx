@@ -5,15 +5,19 @@ import { useSyncExternalStore } from "react"
 
 import { cn } from "@/lib/utils"
 
-const showAfter = 400
+const screensBeforeShow = 3
 
 function subscribe(onStoreChange: () => void) {
   window.addEventListener("scroll", onStoreChange, { passive: true })
-  return () => window.removeEventListener("scroll", onStoreChange)
+  window.addEventListener("resize", onStoreChange)
+  return () => {
+    window.removeEventListener("scroll", onStoreChange)
+    window.removeEventListener("resize", onStoreChange)
+  }
 }
 
 function getSnapshot() {
-  return window.scrollY > showAfter
+  return window.scrollY > window.innerHeight * screensBeforeShow
 }
 
 function getServerSnapshot() {

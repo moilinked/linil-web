@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { deleteAdminArticles, listAdminArticles } from "@/features/admin/articles/articles-api"
+import { tagLabel } from "@/features/admin/articles/tags"
 import type {
   AdminArticle,
   ArticleAudience,
@@ -303,26 +304,42 @@ function NoteCard({ note, onDelete }: { note: AdminArticle; onDelete: (note: Adm
                 <StickyNote aria-hidden="true" className="size-8" />
               </div>
             )}
+            <div className="absolute top-2 left-2 z-10 flex flex-col items-start gap-1.5">
+              <Badge
+                variant={note.status === "published" ? "default" : "secondary"}
+                className={note.status === "draft" ? "bg-chart-3 text-background" : undefined}
+              >
+                {statusLabels[note.status]}
+              </Badge>
+              <Badge variant="outline" className="bg-background/90">
+                {audienceLabels[note.audience]}
+              </Badge>
+            </div>
           </div>
           <CardHeader>
             <CardTitle className="line-clamp-2">{title}</CardTitle>
+            {note.tags.length > 0 ? (
+              <div className="flex h-5 min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden">
+                {note.tags.map((tag) => (
+                  <span key={tag} className="shrink-0 rounded-full bg-muted px-2 text-xs leading-5 text-foreground/80">
+                    {tagLabel(tag)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <CardDescription className="line-clamp-3 min-h-15">{note.summary || "No summary"}</CardDescription>
           </CardHeader>
           <CardFooter className="mt-auto justify-between gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <Badge variant={note.status === "published" ? "default" : "secondary"}>{statusLabels[note.status]}</Badge>
-              <Badge variant="outline">{audienceLabels[note.audience]}</Badge>
-              {note.hasPdf ? (
-                <Badge variant="outline">
-                  <FileText aria-hidden="true" />
-                  PDF
-                </Badge>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1 text-xs text-muted-foreground">
+            <div className="flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground">
               <time dateTime={note.updatedAt}>更新 {formatUpdatedAt(note.updatedAt)}</time>
               {note.publishedAt && publishedAt ? <time dateTime={note.publishedAt}>发布 {publishedAt}</time> : null}
             </div>
+            {note.hasPdf ? (
+              <Badge variant="outline">
+                <FileText aria-hidden="true" />
+                PDF
+              </Badge>
+            ) : null}
           </CardFooter>
         </Card>
       </Link>

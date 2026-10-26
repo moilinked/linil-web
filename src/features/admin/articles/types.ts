@@ -15,6 +15,7 @@ export interface AdminArticle {
   title: string
   summary: string
   coverFileKey: string
+  tags: string[]
   updatedAt: string
 }
 
@@ -99,6 +100,7 @@ export function normalizeAdminArticle(value: unknown): AdminArticle | null {
     title: content.title,
     summary: content.summary,
     coverFileKey: content.coverFileKey,
+    tags: readTags(payload.tags),
     updatedAt: typeof payload.updated_at === "string" ? payload.updated_at : "",
   }
 }

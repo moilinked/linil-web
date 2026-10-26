@@ -5,9 +5,9 @@ export const siteConfig = {
   logoKey: "oilinil-logo",
   faviconKey: "favicon.ico",
   navigation: [
-    { href: "/chat", label: "Chat" },
     { href: "/notes", label: "Notes" },
     { href: "/works", label: "Works" },
+    { href: "/chat", label: "Chat" },
   ],
   beian: {
     number: "粤ICP备2024331316号-3",
