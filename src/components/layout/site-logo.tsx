@@ -34,11 +34,13 @@ export function SiteLogo() {
       className="w-fit rounded-full transition-opacity outline-none hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50"
       onClick={handleClick}
     >
-      <BrandLogo
-        priority
-        className={cn(isSpinning && "animate-[spin_0.7s_ease-in-out]")}
-        onAnimationEnd={() => setIsSpinning(false)}
-      />
+      <span className="inline-flex size-9 items-center justify-center overflow-hidden rounded-full bg-[#1f2937]/90">
+        <BrandLogo
+          priority
+          className={cn(isSpinning && "animate-[spin_0.7s_ease-in-out]")}
+          onAnimationEnd={() => setIsSpinning(false)}
+        />
+      </span>
     </Link>
   )
 }

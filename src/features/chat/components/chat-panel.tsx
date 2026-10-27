@@ -269,7 +269,7 @@ export function ChatPanel() {
 
   return (
     <section className="flex h-full min-h-0 flex-1 overflow-hidden px-4 pb-8 sm:px-6">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-217.5 flex-1 flex-col overflow-hidden rounded-[24px] border border-border bg-card/80 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-md transition-shadow focus-within:shadow-[0_8px_32px_rgba(0,0,0,0.4)] sm:p-6.25">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-217.5 flex-1 flex-col overflow-hidden rounded-[24px] border border-border bg-card/90 p-4 shadow-(--shadow-panel) backdrop-blur-md transition-shadow focus-within:shadow-[var(--shadow-panel-strong)] sm:p-6.25">
         <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-2">
           <div className="min-w-0 flex-1">
             <ConversationTitle

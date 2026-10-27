@@ -11,13 +11,17 @@ async function readError(response: Response, fallback: string): Promise<never> {
 
 interface ListNotesOptions {
   after?: string
+  tag?: string
   signal?: AbortSignal
 }
 
-export async function listNotes({ after, signal }: ListNotesOptions = {}): Promise<PublicNotePage> {
+export async function listNotes({ after, tag, signal }: ListNotesOptions = {}): Promise<PublicNotePage> {
   const params = new URLSearchParams({ first: String(pageSize) })
   if (after) {
     params.set("after", after)
+  }
+  if (tag) {
+    params.set("tag", tag)
   }
 
   const response = await fetch(`/api/articles?${params}`, { cache: "no-store", signal })

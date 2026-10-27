@@ -3,8 +3,8 @@
 @import "shadcn/tailwind.css";
 @import "katex/dist/katex.min.css";
 
-/* The palette below is already dark and there is no theme switch, so this keeps the `dark:`
-   utilities that ship with the shadcn components inert instead of following the OS setting. */
+/* The public site is light and has no theme switch. `dark:` utilities stay inert unless a
+   `.dark` ancestor opts in, which the admin shell does on its own. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -67,6 +67,46 @@
 }
 
 :root {
+  color-scheme: light;
+  --background: #f4f7fb;
+  --foreground: #1e293b;
+  --heading: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0e7490;
+  --primary-hover: #155e75;
+  --primary-foreground: #f8fafc;
+  --secondary: #efe8f8;
+  --secondary-foreground: #3b2760;
+  --muted: #e7eef6;
+  --muted-foreground: #64748b;
+  --accent: #f8d5e2;
+  --accent-foreground: #4a2033;
+  --destructive: #dc2626;
+  --border: #d7e0ea;
+  --input: #d7e0ea;
+  --ring: #0e7490;
+  --chart-1: #0e7490;
+  --chart-2: #db2777;
+  --chart-3: #7c3aed;
+  --chart-4: #0891b2;
+  --chart-5: #64748b;
+  --radius: 4px;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1e293b;
+  --sidebar-primary: #0e7490;
+  --sidebar-primary-foreground: #f8fafc;
+  --sidebar-accent: #e7eef6;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #d7e0ea;
+  --sidebar-ring: #0e7490;
+  --shadow-panel: 0 8px 30px rgb(15 23 42 / 0.08);
+  --shadow-panel-strong: 0 12px 32px rgb(15 23 42 / 0.1);
+}
+
+.site-theme.dark {
   color-scheme: dark;
   --background: #111827;
   --foreground: #e5e7eb;
@@ -93,7 +133,6 @@
   --chart-3: #c2aae2;
   --chart-4: #83e0f5;
   --chart-5: #9ca3af;
-  --radius: 4px;
   --sidebar: #1f2937;
   --sidebar-foreground: #e5e7eb;
   --sidebar-primary: #66d6f0;
@@ -102,6 +141,8 @@
   --sidebar-accent-foreground: #f9fafb;
   --sidebar-border: #374151;
   --sidebar-ring: #66d6f0;
+  --shadow-panel: 0 8px 32px rgb(0 0 0 / 0.28);
+  --shadow-panel-strong: 0 8px 32px rgb(0 0 0 / 0.4);
 }
 
 @layer base {
@@ -112,8 +153,8 @@
     @apply bg-background text-foreground;
     background-image: linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--primary) 14%, var(--background)) 0%,
-      color-mix(in srgb, var(--secondary) 10%, var(--background)) 48%,
+      color-mix(in srgb, var(--primary) 8%, var(--background)) 0%,
+      color-mix(in srgb, var(--secondary) 55%, var(--background)) 46%,
       var(--background) 100%
     );
     background-attachment: fixed;
@@ -136,7 +177,7 @@
   position: absolute;
   width: min(46vw, 420px);
   height: min(42vh, 360px);
-  opacity: 0.58;
+  opacity: 0.42;
   background-image:
     repeating-linear-gradient(to bottom, var(--page-decor-line) 0 1px, transparent 1px 5px),
     radial-gradient(circle, var(--page-decor-dot) 0.85px, transparent 1.2px),
@@ -274,6 +315,19 @@
   --sidebar-ring: var(--ring);
 }
 
+body.site-theme.dark {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--primary) 14%, var(--background)) 0%,
+    color-mix(in srgb, var(--secondary) 10%, var(--background)) 48%,
+    var(--background) 100%
+  );
+}
+
+body.site-theme.dark .page-decor {
+  opacity: 0.58;
+}
+
 body.admin-theme {
   background-image: none;
   background-color: var(--background);
@@ -399,22 +453,24 @@ body.admin-theme .page-decor {
   padding-inline-start: 1.25rem;
 }
 
-/* The public site stays dark, so note code uses github-dark unless it sits in the light admin theme. */
+/* Public pages are light, so note code uses github-light. Admin dark mode opts back into github-dark. */
 .note-body .shiki,
 .note-body .shiki span {
-  color: var(--shiki-dark);
-  background-color: transparent;
-  font-style: var(--shiki-dark-font-style);
-  font-weight: var(--shiki-dark-font-weight);
-  text-decoration: var(--shiki-dark-text-decoration);
-}
-
-.admin-theme:not(.dark) .note-body .shiki,
-.admin-theme:not(.dark) .note-body .shiki span {
   color: var(--shiki-light);
+  background-color: transparent;
   font-style: var(--shiki-light-font-style);
   font-weight: var(--shiki-light-font-weight);
   text-decoration: var(--shiki-light-text-decoration);
+}
+
+.site-theme.dark .note-body .shiki,
+.site-theme.dark .note-body .shiki span,
+.admin-theme.dark .note-body .shiki,
+.admin-theme.dark .note-body .shiki span {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style);
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
 }
 
 .note-body pre.shiki,

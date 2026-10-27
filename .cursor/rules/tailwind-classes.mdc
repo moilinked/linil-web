@@ -1,0 +1,15 @@
+---
+description: 新代码使用 Tailwind CSS v4 官方推荐的 class 写法
+alwaysApply: true
+---
+
+# Tailwind Classes
+
+新写或新生成的 class 使用 Tailwind CSS v4 官方推荐语法。已有 class 保持原样，除非用户明确要求改写。
+
+- CSS 变量用圆括号简写，不要再包一层 `var()`。`shadow-(--shadow-panel)`，不要写成 `shadow-[var(--shadow-panel)]`。颜色、尺寸同理：`bg-(--brand)`、`text-(length:--my-size)`。
+- 需要标注类型时使用官方的 `utility-(type:--var)`，例如 `bg-(color:--brand)`。
+- 长度落在默认间距刻度上时用刻度类，不要写像素任意值。1 个单位是 `0.25rem`（4px），所以 `min-h-[288px]` 写成 `min-h-72`。`w-1/2` 不要写成 `w-[50%]`。刻度上没有的数值才保留任意值，例如 `min-h-[13px]`。
+- 没有对应工具类时才用方括号任意值。任意属性仍用方括号，例如 `[mask-type:luminance]`。
+- `important` 写在类名末尾：`hidden!`，不要写成 `!hidden`。
+- 已有设计令牌时直接用令牌类，例如 `bg-primary`、`text-muted-foreground`，不要用任意值重复定义。

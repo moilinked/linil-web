@@ -5,7 +5,9 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, FileText } from "lucide-react"
 
+import { tagLabel } from "@/features/admin/articles/tags"
 import { fileUrl } from "@/features/admin/files/files-api"
+import { noteTagHref } from "@/features/notes/note-tag"
 import type { PublicNoteDetail } from "@/features/notes/types"
 import { formatDate } from "@/lib/datetime"
 
@@ -24,18 +26,33 @@ export function NoteArticle({ note, html }: { note: PublicNoteDetail; html: stri
       </Link>
       <header className="flex flex-col gap-3">
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          {publishedAt ? <time dateTime={note.publishedAt}>{publishedAt}</time> : null}
-          {note.hasPdf ? (
-            <a
-              href={`/api/articles/${note.slug}/pdf`}
-              className="inline-flex items-center gap-1 rounded-sm underline-offset-4 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
-            >
-              <FileText aria-hidden="true" className="size-3.5" />
-              PDF
-            </a>
-          ) : null}
-        </div>
+        {publishedAt || note.hasPdf ? (
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            {publishedAt ? <time dateTime={note.publishedAt}>{publishedAt}</time> : null}
+            {note.hasPdf ? (
+              <a
+                href={`/api/articles/${note.slug}/pdf`}
+                className="inline-flex items-center gap-1 rounded-sm underline-offset-4 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              >
+                <FileText aria-hidden="true" className="size-3.5" />
+                PDF
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+        {note.tags.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {note.tags.map((tag) => (
+              <Link
+                key={tag}
+                href={noteTagHref(tag)}
+                className="rounded-full bg-muted px-2 py-0.5 text-xs text-foreground/80 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              >
+                {tagLabel(tag)}
+              </Link>
+            ))}
+          </div>
+        ) : null}
         {note.summary ? <p className="text-base leading-7 text-muted-foreground">{note.summary}</p> : null}
       </header>
       {note.coverFileKey ? <NoteCover fileKey={note.coverFileKey} /> : null}

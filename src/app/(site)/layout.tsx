@@ -2,6 +2,7 @@ import Script from "next/script"
 
 import { SiteFooter } from "@/components/layout/site-footer"
 import { SiteHeader } from "@/components/layout/site-header"
+import { SiteThemeProvider } from "@/components/layout/site-theme"
 import { AuthProvider } from "@/features/auth/components/auth-provider"
 import { getSessionUser } from "@/features/auth/session"
 
@@ -12,11 +13,19 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
 
   return (
     <AuthProvider initialUser={user}>
-      <div className="flex flex-col">
-        <SiteHeader />
-        <main className="flex flex-col">{children}</main>
-        <SiteFooter />
-      </div>
+      <SiteThemeProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              '(function(){try{var dark=localStorage.getItem("site-theme")==="dark";document.body.classList.add("site-theme");document.body.classList.toggle("dark",dark)}catch(e){}})()',
+          }}
+        />
+        <div className="flex flex-col">
+          <SiteHeader />
+          <main className="flex flex-col">{children}</main>
+          <SiteFooter />
+        </div>
+      </SiteThemeProvider>
       <Script
         defer
         src="https://analytics.oilinil.cn/script.js"

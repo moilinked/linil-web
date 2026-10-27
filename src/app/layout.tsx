@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="zh-CN" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="relative isolate flex min-h-full flex-col">
+      <body suppressHydrationWarning className="relative isolate flex min-h-full flex-col">
         <PageDecor />
         <div className="relative z-10 flex min-h-full flex-1 flex-col">
           {children}
