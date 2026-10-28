@@ -17,7 +17,7 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
         <script
           dangerouslySetInnerHTML={{
             __html:
-              '(function(){try{var dark=localStorage.getItem("site-theme")==="dark";document.body.classList.add("site-theme");document.body.classList.toggle("dark",dark)}catch(e){}})()',
+              '(function(){var dark=true;try{dark=localStorage.getItem("site-theme")!=="light"}catch(e){}document.body.classList.add("site-theme");document.body.classList.toggle("dark",dark)})()',
           }}
         />
         <div className="flex flex-col">

@@ -6,6 +6,7 @@ export const presetTags = [
   { value: "news summary", label: "News summary" },
   { value: "work introduction", label: "Work introduction" },
   { value: "inspiration", label: "Inspiration" },
+  { value: "ai agent", label: "AI Agent" },
 ] as const
 
 const presetLabels = new Map<string, string>(presetTags.map((tag) => [tag.value, tag.label]))

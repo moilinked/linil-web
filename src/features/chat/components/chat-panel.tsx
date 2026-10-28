@@ -305,7 +305,7 @@ export function ChatPanel() {
                   className="flex min-h-full w-full flex-col px-3 py-4"
                 >
                   {showHydrating ? (
-                    <div className="flex flex-1 items-center justify-center" role="status">
+                    <div className="flex w-full flex-1 items-center justify-center" role="status">
                       <LoaderCircle aria-hidden="true" className="size-5 animate-spin text-muted-foreground" />
                       <span className="sr-only">Loading conversation</span>
                     </div>

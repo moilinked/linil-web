@@ -1,13 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import Image from "next/image"
 import Link from "next/link"
-import { ArrowDown, ArrowUp, FileText, LoaderCircle, StickyNote, Trash2, X } from "lucide-react"
+import { ArrowDown, ArrowUp, LoaderCircle, Trash2, X } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -27,7 +25,6 @@ import type {
   ArticleSortOrder,
   ArticleStatus,
 } from "@/features/admin/articles/types"
-import { fileUrl } from "@/features/admin/files/files-api"
 import { formatDate } from "@/lib/datetime"
 import { cn } from "@/lib/utils"
 
@@ -236,7 +233,7 @@ export function NotesBoard() {
       ) : notes.length === 0 ? (
         <p className="text-sm text-muted-foreground">{emptyLabel}</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="flex flex-col gap-3">
           {notes.map((note) => (
             <NoteCard key={note.id} note={note} onDelete={setPendingDelete} />
           ))}
@@ -276,78 +273,41 @@ export function NotesBoard() {
 }
 
 function NoteCard({ note, onDelete }: { note: AdminArticle; onDelete: (note: AdminArticle) => void }) {
-  const [coverFailed, setCoverFailed] = useState(false)
   const title = note.title || "Untitled"
-  const showCover = Boolean(note.coverFileKey) && !coverFailed
-  const publishedAt = formatDate(note.publishedAt)
 
   return (
-    <div className="relative h-full">
+    <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
       <Link
         href={`/admin/notes/${note.id}`}
-        className="block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex min-w-0 flex-1 flex-col gap-2 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <Card className="h-full pt-0 transition-colors hover:bg-muted/30">
-          <div className="relative aspect-16/10 bg-muted">
-            {showCover ? (
-              <Image
-                src={fileUrl(note.coverFileKey)}
-                alt=""
-                fill
-                unoptimized
-                sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                className="object-cover"
-                onError={() => setCoverFailed(true)}
-              />
-            ) : (
-              <div className="flex size-full items-center justify-center text-muted-foreground">
-                <StickyNote aria-hidden="true" className="size-8" />
-              </div>
-            )}
-            <div className="absolute top-2 left-2 z-10 flex flex-col items-start gap-1.5">
-              <Badge
-                variant={note.status === "published" ? "default" : "secondary"}
-                className={note.status === "draft" ? "bg-chart-3 text-background" : undefined}
-              >
-                {statusLabels[note.status]}
-              </Badge>
-              <Badge variant="outline" className="bg-background/90">
-                {audienceLabels[note.audience]}
-              </Badge>
-            </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <Badge
+            variant={note.status === "published" ? "default" : "secondary"}
+            className={note.status === "draft" ? "bg-chart-3 text-background" : undefined}
+          >
+            {statusLabels[note.status]}
+          </Badge>
+          <span>{audienceLabels[note.audience]}</span>
+          <time dateTime={note.updatedAt}>{formatUpdatedAt(note.updatedAt)}</time>
+        </div>
+        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+        {note.slug ? <p className="truncate text-xs text-muted-foreground">{note.slug}</p> : null}
+        {note.tags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {note.tags.map((tag) => (
+              <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs text-foreground/80">
+                {tagLabel(tag)}
+              </span>
+            ))}
           </div>
-          <CardHeader>
-            <CardTitle className="line-clamp-2">{title}</CardTitle>
-            {note.tags.length > 0 ? (
-              <div className="flex h-5 min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden">
-                {note.tags.map((tag) => (
-                  <span key={tag} className="shrink-0 rounded-full bg-muted px-2 text-xs leading-5 text-foreground/80">
-                    {tagLabel(tag)}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-            <CardDescription className="line-clamp-3 min-h-15">{note.summary || "No summary"}</CardDescription>
-          </CardHeader>
-          <CardFooter className="mt-auto justify-between gap-3">
-            <div className="flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground">
-              <time dateTime={note.updatedAt}>更新 {formatUpdatedAt(note.updatedAt)}</time>
-              {note.publishedAt && publishedAt ? <time dateTime={note.publishedAt}>发布 {publishedAt}</time> : null}
-            </div>
-            {note.hasPdf ? (
-              <Badge variant="outline">
-                <FileText aria-hidden="true" />
-                PDF
-              </Badge>
-            ) : null}
-          </CardFooter>
-        </Card>
+        ) : null}
       </Link>
       <Button
         type="button"
-        variant="secondary"
+        variant="ghost"
         size="icon-sm"
-        className="absolute top-2 right-2 z-10 bg-background/90"
+        className="shrink-0"
         aria-label={`删除 ${title}`}
         onClick={() => onDelete(note)}
       >

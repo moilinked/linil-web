@@ -3,8 +3,8 @@
 @import "shadcn/tailwind.css";
 @import "katex/dist/katex.min.css";
 
-/* The public site is light and has no theme switch. `dark:` utilities stay inert unless a
-   `.dark` ancestor opts in, which the admin shell does on its own. */
+/* `dark:` utilities apply under a `.dark` ancestor. Public pages use it for the default
+   dark theme, and the admin shell toggles its own theme separately. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -453,7 +453,7 @@ body.admin-theme .page-decor {
   padding-inline-start: 1.25rem;
 }
 
-/* Public pages are light, so note code uses github-light. Admin dark mode opts back into github-dark. */
+/* Note code uses github-light until the public or admin dark theme opts into github-dark. */
 .note-body .shiki,
 .note-body .shiki span {
   color: var(--shiki-light);

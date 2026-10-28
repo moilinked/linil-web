@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { FileText, LoaderCircle, StickyNote } from "lucide-react"
+import { FileText, StickyNote } from "lucide-react"
 
+import { PageLoading } from "@/components/content/page-loading"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { fileUrl } from "@/features/admin/files/files-api"
@@ -70,12 +71,7 @@ export function NotesList() {
   }
 
   if (isLoading) {
-    return (
-      <p className="inline-flex items-center gap-2 text-sm text-muted-foreground" role="status">
-        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-        Loading notes
-      </p>
-    )
+    return <PageLoading label="Loading notes" />
   }
 
   return (

@@ -16,15 +16,15 @@ type SiteThemeContextValue = {
 }
 
 const SiteThemeContext = createContext<SiteThemeContextValue>({
-  theme: "light",
+  theme: "dark",
   toggleTheme: () => {},
 })
 
 function readStoredTheme(): SiteThemeName {
   try {
-    return localStorage.getItem(storageKey) === "dark" ? "dark" : "light"
+    return localStorage.getItem(storageKey) === "light" ? "light" : "dark"
   } catch {
-    return "light"
+    return "dark"
   }
 }
 
@@ -43,7 +43,7 @@ function applySiteTheme(theme: SiteThemeName) {
 }
 
 export function SiteThemeProvider({ children }: { children: ReactNode }) {
-  const theme = useSyncExternalStore(subscribe, readStoredTheme, () => "light" as const)
+  const theme = useSyncExternalStore(subscribe, readStoredTheme, () => "dark" as const)
 
   useLayoutEffect(() => {
     applySiteTheme(theme)

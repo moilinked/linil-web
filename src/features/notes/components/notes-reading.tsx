@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { FileText, LoaderCircle } from "lucide-react"
+import { FileText } from "lucide-react"
 
+import { PageLoading } from "@/components/content/page-loading"
 import { Button } from "@/components/ui/button"
 import { fileUrl } from "@/features/admin/files/files-api"
 import { tagLabel } from "@/features/admin/articles/tags"
@@ -70,12 +71,7 @@ export function NotesReading({ tag = "" }: { tag?: string }) {
   }
 
   if (isLoading) {
-    return (
-      <p className="inline-flex items-center gap-2 text-sm text-muted-foreground" role="status">
-        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-        Loading notes
-      </p>
-    )
+    return <PageLoading label="Loading notes" />
   }
 
   return (
