@@ -2,11 +2,16 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { LogOut } from "lucide-react"
+import { LogOut, MessageSquare } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/features/auth/auth-context"
 
 function getInitials(name: string) {
@@ -49,8 +54,8 @@ export function AuthHeaderActions() {
   }
 
   return (
-    <HoverCard>
-      <HoverCardTrigger
+    <DropdownMenu>
+      <DropdownMenuTrigger
         render={
           <button
             type="button"
@@ -62,20 +67,20 @@ export function AuthHeaderActions() {
         <Avatar>
           <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
         </Avatar>
-      </HoverCardTrigger>
-      <HoverCardContent align="end" side="bottom" className="w-52 p-2">
-        <p className="truncate px-2 py-1.5 text-sm font-medium">{user.name}</p>
-        <Button
-          type="button"
-          variant="ghost"
-          className="w-full justify-start gap-2"
-          onClick={handleLogout}
-          disabled={isLoggingOut}
-        >
-          <LogOut aria-hidden="true" className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-52">
+        <p className="truncate px-1.5 py-1 text-sm font-medium">{user.name}</p>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem render={<Link href="/chat" />}>
+          <MessageSquare aria-hidden="true" />
+          Chat
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={handleLogout} disabled={isLoggingOut}>
+          <LogOut aria-hidden="true" />
           {isLoggingOut ? "Logging out…" : "Log out"}
-        </Button>
-      </HoverCardContent>
-    </HoverCard>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

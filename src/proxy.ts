@@ -14,28 +14,37 @@ function clearAuthResponseCookies(response: NextResponse) {
   return response
 }
 
+function needsSession(pathname: string) {
+  return (
+    pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/chat" || pathname.startsWith("/chat/")
+  )
+}
+
+function loginRedirect(request: NextRequest) {
+  const loginUrl = new URL("/login", request.url)
+  loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`)
+  return loginUrl
+}
+
 export function proxy(request: NextRequest) {
   const token = request.cookies.get(AUTH_TOKEN_COOKIE_NAME)?.value
   const sessionValue = request.cookies.get(AUTH_COOKIE_NAME)?.value
-  const isAdmin = request.nextUrl.pathname === "/admin" || request.nextUrl.pathname.startsWith("/admin/")
+  const pathname = request.nextUrl.pathname
+  const requiresSession = needsSession(pathname)
 
   if (isAuthSessionUnusable(token, sessionValue)) {
-    if (!isAdmin) {
+    if (!requiresSession) {
       return clearAuthResponseCookies(NextResponse.next())
     }
 
-    const loginUrl = new URL("/login", request.url)
-    loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`)
-    return clearAuthResponseCookies(NextResponse.redirect(loginUrl))
+    return clearAuthResponseCookies(NextResponse.redirect(loginRedirect(request)))
   }
 
-  if (!isAdmin || token) {
+  if (!requiresSession || token) {
     return NextResponse.next()
   }
 
-  const loginUrl = new URL("/login", request.url)
-  loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`)
-  return NextResponse.redirect(loginUrl)
+  return NextResponse.redirect(loginRedirect(request))
 }
 
 export const config = {

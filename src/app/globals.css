@@ -551,3 +551,49 @@ body.admin-theme .page-decor {
   animation-fill-mode: both;
   animation-timeline: scroll(root);
 }
+
+.resume-profile {
+  --glow-x: 50%;
+  --glow-y: 0%;
+}
+
+.resume-profile::before,
+.resume-profile::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.resume-profile::before {
+  inset-inline: 1.5rem;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--primary), var(--accent), transparent);
+}
+
+.resume-profile::after {
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    460px circle at var(--glow-x) var(--glow-y),
+    color-mix(in srgb, var(--primary) 28%, transparent),
+    transparent 58%
+  );
+  opacity: 0.7;
+  transition: opacity 180ms ease-out;
+}
+
+.resume-profile:hover::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resume-profile {
+    transition: none;
+  }
+
+  .resume-profile::after {
+    display: none;
+  }
+}
