@@ -3,13 +3,13 @@ import Script from "next/script"
 import { SiteFooter } from "@/components/layout/site-footer"
 import { SiteHeader } from "@/components/layout/site-header"
 import { SiteThemeProvider } from "@/components/layout/site-theme"
+import { getUmamiTracking } from "@/config/umami"
 import { AuthProvider } from "@/features/auth/components/auth-provider"
 import { getSessionUser } from "@/features/auth/session"
 
-const umamiWebsiteId = "8258e751-f426-4e49-8d9d-25b71fb7112a"
-
 export default async function SiteLayout({ children }: LayoutProps<"/">) {
   const user = await getSessionUser()
+  const umami = getUmamiTracking()
 
   return (
     <AuthProvider initialUser={user}>
@@ -26,12 +26,7 @@ export default async function SiteLayout({ children }: LayoutProps<"/">) {
           <SiteFooter />
         </div>
       </SiteThemeProvider>
-      <Script
-        defer
-        src="https://analytics.oilinil.cn/script.js"
-        data-website-id={umamiWebsiteId}
-        strategy="afterInteractive"
-      />
+      <Script defer src={umami.scriptSrc} data-website-id={umami.websiteId} strategy="afterInteractive" />
     </AuthProvider>
   )
 }

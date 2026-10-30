@@ -16,6 +16,9 @@ services:
       CHAT_API_URL: ${CHAT_API_URL:-${API_URL:-http://chat-agent:9998}}
       SITE_API_URL: ${SITE_API_URL:-http://site:9997}
       ADMIN_USERS: ${ADMIN_USERS:-}
+      UMAMI_API_URL: ${UMAMI_API_URL:-https://analytics.oilinil.cn}
+      UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+      UMAMI_API_KEY: ${UMAMI_API_KEY:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

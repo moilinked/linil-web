@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 
+import { loadAdminAnalytics } from "@/features/admin/analytics/load-analytics"
 import { AdminDashboard } from "@/features/admin/components/admin-dashboard"
 
 export const metadata: Metadata = {
@@ -7,6 +8,8 @@ export const metadata: Metadata = {
   description: "Admin dashboard",
 }
 
-export default function AdminPage() {
-  return <AdminDashboard />
+export default async function AdminPage() {
+  const analytics = await loadAdminAnalytics()
+
+  return <AdminDashboard analytics={analytics} />
 }

@@ -1,175 +1,270 @@
-import { Activity, CreditCard, DollarSign, Users } from "lucide-react"
+import { Activity, Eye, MousePointerClick, Users } from "lucide-react"
+import Link from "next/link"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { AnalyticsResult, RankedMetric, VisitHeatmap } from "@/features/admin/analytics/types"
+import { AdminPageHeading } from "@/features/admin/components/admin-page-heading"
+import { cn } from "@/lib/utils"
 
-const overviewData = [
-  { name: "Jan", total: 1600 },
-  { name: "Feb", total: 2600 },
-  { name: "Mar", total: 3300 },
-  { name: "Apr", total: 2000 },
-  { name: "May", total: 2800 },
-  { name: "Jun", total: 2700 },
-  { name: "Jul", total: 5900 },
-  { name: "Aug", total: 6100 },
-  { name: "Sep", total: 3600 },
-  { name: "Oct", total: 2100 },
-  { name: "Nov", total: 4800 },
-  { name: "Dec", total: 4900 },
+const numberFormat = new Intl.NumberFormat("en-US")
+
+function formatCount(value: number) {
+  return numberFormat.format(value)
+}
+
+function formatChange(current: number, previous: number) {
+  if (previous <= 0) {
+    return current > 0 ? "No traffic in the previous 30 days" : "Same as the previous 30 days"
+  }
+
+  const percent = Math.round(((current - previous) / previous) * 1000) / 10
+  const sign = percent > 0 ? "+" : ""
+  return `${sign}${percent}% from the previous 30 days`
+}
+
+const heatClasses = [
+  "bg-muted",
+  "bg-[color-mix(in_oklch,var(--chart-2)_28%,var(--muted))]",
+  "bg-[color-mix(in_oklch,var(--chart-2)_52%,var(--muted))]",
+  "bg-[color-mix(in_oklch,var(--chart-2)_76%,var(--muted))]",
+  "bg-chart-2",
 ] as const
 
-const overviewMax = 6000
+function heatLevel(value: number, max: number) {
+  if (value <= 0 || max <= 0) {
+    return 0
+  }
 
-const recentSales = [
-  { name: "Olivia Martin", email: "olivia.martin@email.com", amount: "+$1,999.00", initials: "OM" },
-  { name: "Jackson Lee", email: "jackson.lee@email.com", amount: "+$39.00", initials: "JL" },
-  { name: "Isabella Nguyen", email: "isabella.nguyen@email.com", amount: "+$299.00", initials: "IN" },
-  { name: "William Kim", email: "will@email.com", amount: "+$99.00", initials: "WK" },
-  { name: "Sofia Davis", email: "sofia.davis@email.com", amount: "+$39.00", initials: "SD" },
-] as const
+  return Math.min(4, Math.max(1, Math.ceil((value / max) * 4)))
+}
 
-const statCards = [
-  {
-    title: "Total Revenue",
-    value: "$45,231.89",
-    change: "+20.1% from last month",
-    icon: DollarSign,
-  },
-  {
-    title: "Subscriptions",
-    value: "+2350",
-    change: "+180.1% from last month",
-    icon: Users,
-  },
-  {
-    title: "Sales",
-    value: "+12,234",
-    change: "+19% from last month",
-    icon: CreditCard,
-  },
-  {
-    title: "Active Now",
-    value: "+573",
-    change: "+201 since last hour",
-    icon: Activity,
-  },
-] as const
-
-function OverviewChart() {
+function HeatLegend() {
   return (
-    <div className="flex h-87.5 gap-3">
-      <div className="flex h-[calc(100%-1.25rem)] flex-col justify-between text-xs text-muted-foreground">
-        <span>$6000</span>
-        <span>$4500</span>
-        <span>$3000</span>
-        <span>$1500</span>
-        <span>$0</span>
-      </div>
-      <div className="relative flex min-w-0 flex-1 items-end gap-2">
-        <div className="pointer-events-none absolute inset-x-0 top-0 bottom-5 flex flex-col justify-between">
-          {Array.from({ length: 5 }, (_, index) => (
-            <div key={index} className="border-t border-border/70" />
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span>Less</span>
+      {heatClasses.map((className) => (
+        <span key={className} className={cn("size-3.5 rounded-sm", className)} />
+      ))}
+      <span>More</span>
+    </div>
+  )
+}
+
+function PageviewHeatmap({ heatmap }: { heatmap: VisitHeatmap }) {
+  const max = Math.max(...heatmap.days.flatMap((day) => day.counts), 0)
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="flex w-full min-w-max items-start gap-3">
+        <div className="flex flex-col gap-1 pt-5">
+          {heatmap.bands.map((band) => (
+            <span key={band.label} className="flex h-4 items-center text-xs whitespace-nowrap text-muted-foreground">
+              {band.label}
+            </span>
           ))}
         </div>
-        {overviewData.map((item) => (
-          <div key={item.name} className="relative flex h-full min-w-0 flex-1 flex-col">
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0" style={{ flexGrow: overviewMax - item.total, flexBasis: 0 }} />
-              <div className="min-h-1 rounded-t-md bg-primary" style={{ flexGrow: item.total, flexBasis: 0 }} />
+        <div className="flex min-w-max flex-1 justify-between gap-1">
+          {heatmap.days.map((day) => (
+            <div key={day.date} className="flex flex-col items-center gap-1">
+              <span className="relative h-4 w-4">
+                {day.showMonth ? (
+                  <span className="absolute top-0 left-0 text-[10px] whitespace-nowrap text-muted-foreground">
+                    {day.monthLabel}
+                  </span>
+                ) : null}
+              </span>
+              {day.counts.map((count, index) => (
+                <span
+                  key={heatmap.bands[index]?.label ?? index}
+                  title={`${day.monthLabel} ${day.dayLabel}, ${heatmap.bands[index]?.label ?? ""} · ${formatCount(count)} pageviews`}
+                  className={cn("size-4 shrink-0 rounded-sm", heatClasses[heatLevel(count, max)])}
+                />
+              ))}
+              <span className="text-[10px] text-muted-foreground tabular-nums">{day.dayLabel}</span>
             </div>
-            <span className="mt-2 h-4 text-center text-xs text-muted-foreground">{item.name}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
-function RecentSales() {
+function RankList({ rows }: { rows: RankedMetric[] }) {
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground">No data for this period.</p>
+  }
+
+  const max = Math.max(...rows.map((row) => row.value), 1)
+
   return (
-    <div className="space-y-8">
-      {recentSales.map((sale) => (
-        <div key={sale.email} className="flex items-center gap-4">
-          <Avatar className="size-9">
-            <AvatarFallback>{sale.initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0 space-y-1">
-              <p className="text-sm leading-none font-medium">{sale.name}</p>
-              <p className="truncate text-sm text-muted-foreground">{sale.email}</p>
+    <div className="flex flex-col gap-3">
+      {rows.map((row, index) => (
+        <div key={`${row.name}-${index}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm">{row.name}</p>
+            <div className="mt-1 h-1.5 rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${(row.value / max) * 100}%` }} />
             </div>
-            <div className="text-sm font-medium">{sale.amount}</div>
           </div>
+          <span className="text-sm text-muted-foreground tabular-nums">{formatCount(row.value)}</span>
         </div>
       ))}
     </div>
   )
 }
 
-export function AdminDashboard() {
+function StatCard({
+  title,
+  value,
+  detail,
+  icon: Icon,
+  href,
+}: {
+  title: string
+  value: string
+  detail: string
+  icon: typeof Eye
+  href?: string
+}) {
+  const card = (
+    <Card className={href ? "h-full transition-colors hover:bg-muted/40" : undefined}>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <CardAction>
+          <Icon className="size-4 text-muted-foreground" />
+        </CardAction>
+      </CardHeader>
+      <CardContent className="space-y-1">
+        <div className="text-2xl font-bold">{value}</div>
+        <p className="text-xs text-muted-foreground">{detail}</p>
+      </CardContent>
+    </Card>
+  )
+
+  if (!href) {
+    return card
+  }
+
+  return (
+    <Link href={href} className="rounded-xl focus-visible:ring-2 focus-visible:ring-ring">
+      {card}
+    </Link>
+  )
+}
+
+export function AdminDashboard({ analytics }: { analytics: AnalyticsResult }) {
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-      <Tabs defaultValue="overview">
-        <div className="w-full overflow-x-auto pb-2">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="reports" disabled>
-              Reports
-            </TabsTrigger>
-            <TabsTrigger value="notifications" disabled>
-              Notifications
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        <TabsContent value="overview" className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {statCards.map((card) => (
-              <Card key={card.title}>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                  <CardAction>
-                    <card.icon className="size-4 text-muted-foreground" />
-                  </CardAction>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  <div className="text-2xl font-bold">{card.value}</div>
-                  <p className="text-xs text-muted-foreground">{card.change}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-            <Card className="lg:col-span-4">
-              <CardHeader>
-                <CardTitle>Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <OverviewChart />
-              </CardContent>
-            </Card>
-            <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle>Recent Sales</CardTitle>
-                <CardDescription>You made 265 sales this month.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RecentSales />
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Analytics</CardTitle>
-              <CardDescription>Traffic and conversion charts will appear in this tab.</CardDescription>
-            </CardHeader>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <AdminPageHeading title="Dashboard" description="Site traffic from Umami for the last 30 days." />
+      {analytics.ok ? <AnalyticsOverview data={analytics.data} /> : <AnalyticsError message={analytics.error} />}
     </div>
+  )
+}
+
+function AnalyticsError({ message }: { message: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Analytics unavailable</CardTitle>
+        <CardDescription>{message}</CardDescription>
+      </CardHeader>
+    </Card>
+  )
+}
+
+function AnalyticsOverview({ data }: { data: Extract<AnalyticsResult, { ok: true }>["data"] }) {
+  const cards = [
+    {
+      title: "Pageviews",
+      value: formatCount(data.stats.pageviews),
+      detail: formatChange(data.stats.pageviews, data.previous.pageviews),
+      icon: Eye,
+    },
+    {
+      title: "Visitors",
+      value: formatCount(data.stats.visitors),
+      detail: formatChange(data.stats.visitors, data.previous.visitors),
+      icon: Users,
+      href: "/admin/visitors",
+    },
+    {
+      title: "Visits",
+      value: formatCount(data.stats.visits),
+      detail: formatChange(data.stats.visits, data.previous.visits),
+      icon: MousePointerClick,
+    },
+    {
+      title: "Active now",
+      value: formatCount(data.activeVisitors),
+      detail: "Visitors in the last 5 minutes",
+      icon: Activity,
+    },
+  ]
+
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((card) => (
+          <StatCard key={card.title} {...card} />
+        ))}
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Pageviews</CardTitle>
+          <CardDescription>
+            {data.heatmap.rangeLabel} · {formatCount(data.heatmap.total)} pageviews
+          </CardDescription>
+          <CardAction>
+            <HeatLegend />
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <PageviewHeatmap heatmap={data.heatmap} />
+        </CardContent>
+      </Card>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <Card>
+          <CardHeader>
+            <CardTitle>Top pages</CardTitle>
+            <CardDescription>Most viewed paths</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RankList rows={data.pages} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Referrers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RankList rows={data.referrers} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Browsers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RankList rows={data.browsers} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Countries</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RankList rows={data.countries} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Devices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RankList rows={data.devices} />
+          </CardContent>
+        </Card>
+      </div>
+    </>
   )
 }
