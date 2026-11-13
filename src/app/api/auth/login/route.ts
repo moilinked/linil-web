@@ -8,6 +8,7 @@ import {
   serializeSessionValue,
   sessionCookieOptions,
 } from "@/features/auth/session"
+import { readClientIp, verifyTurnstileToken } from "@/features/auth/verify-turnstile"
 import type { AuthUser, LoginRequest } from "@/features/auth/types"
 
 interface BackendLoginPayload {
@@ -43,9 +44,16 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as Partial<LoginRequest> | null
   const username = body?.username?.trim() ?? ""
   const password = body?.password ?? ""
+  const turnstileToken = body?.turnstileToken?.trim() ?? ""
 
   if (!username || !password) {
     return NextResponse.json({ error: "Username and password are required" }, { status: 400 })
+  }
+
+  const verification = await verifyTurnstileToken(turnstileToken, readClientIp(request))
+  if (!verification.ok) {
+    const status = verification.error === "Turnstile is not configured" ? 503 : 403
+    return NextResponse.json({ error: verification.error }, { status })
   }
 
   const resolved = resolveBackendUrl("site", "/api/auth/login")
@@ -61,7 +69,7 @@ export async function POST(request: Request) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ username, password } satisfies LoginRequest),
+      body: JSON.stringify({ username, password }),
       cache: "no-store",
       signal: request.signal,
     })

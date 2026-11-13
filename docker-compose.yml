@@ -19,6 +19,8 @@ services:
       UMAMI_API_URL: ${UMAMI_API_URL:-https://analytics.oilinil.cn}
       UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
       UMAMI_API_KEY: ${UMAMI_API_KEY:-}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 
+import { getTurnstileSiteKey } from "@/config/turnstile"
 import { LoginPageContent } from "@/features/auth/components/login-page-content"
 import { getSafeNextPath } from "@/features/auth/next-path"
 import { getSessionUser } from "@/features/auth/session"
@@ -18,5 +19,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
     redirect(getSafeNextPath(nextPath))
   }
 
-  return <LoginPageContent nextPath={nextPath} />
+  return (
+    <>
+      <LoginPageContent nextPath={nextPath} siteKey={getTurnstileSiteKey()} />
+    </>
+  )
 }

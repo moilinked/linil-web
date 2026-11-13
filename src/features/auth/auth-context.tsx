@@ -7,7 +7,7 @@ import type { AuthUser } from "@/features/auth/types"
 export interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
-  login: (username: string, password: string) => Promise<void>
+  login: (username: string, password: string, token: string) => Promise<void>
   logout: () => Promise<void>
 }
 

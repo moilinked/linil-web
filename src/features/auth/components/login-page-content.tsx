@@ -7,9 +7,10 @@ import { getSafeNextPath } from "@/features/auth/next-path"
 
 interface LoginPageContentProps {
   nextPath?: string
+  siteKey: string
 }
 
-export function LoginPageContent({ nextPath }: LoginPageContentProps) {
+export function LoginPageContent({ nextPath, siteKey }: LoginPageContentProps) {
   const router = useRouter()
 
   function handleSuccess() {
@@ -21,7 +22,7 @@ export function LoginPageContent({ nextPath }: LoginPageContentProps) {
     <div className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-4 py-16 sm:px-6">
       <section className="w-full max-w-sm rounded-[24px] border border-border bg-card/90 p-6 shadow-(--shadow-panel) backdrop-blur-md">
         <h1 className="mb-6 text-xl font-semibold tracking-tight">Login</h1>
-        <LoginForm onSuccess={handleSuccess} />
+        <LoginForm siteKey={siteKey} onSuccess={handleSuccess} />
       </section>
     </div>
   )

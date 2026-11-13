@@ -43,8 +43,8 @@ export function AuthProvider({ initialUser, children }: AuthProviderProps) {
     return pending
   }, [router])
 
-  const login = useCallback(async (username: string, password: string) => {
-    const nextUser = await loginRequest({ username, password })
+  const login = useCallback(async (username: string, password: string, turnstileToken: string) => {
+    const nextUser = await loginRequest({ username, password, turnstileToken })
     userRef.current = nextUser
     setUser(nextUser)
   }, [])

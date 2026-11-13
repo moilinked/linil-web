@@ -5,6 +5,7 @@ export interface AuthUser {
 export interface LoginRequest {
   username: string
   password: string
+  turnstileToken: string
 }
 
 export interface AuthResponse {
