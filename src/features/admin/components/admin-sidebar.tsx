@@ -117,11 +117,72 @@ function AdminNavUser() {
   )
 }
 
+function SettingsMenu() {
+  const pathname = usePathname()
+  const { isMobile, state } = useSidebar()
+  const settingsActive = pathname.startsWith("/admin/settings")
+  const [settingsOpen, setSettingsOpen] = useState(settingsActive)
+  const collapsed = state === "collapsed" && !isMobile
+
+  if (collapsed) {
+    return (
+      <SidebarMenuItem>
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger
+            openOnHover
+            delay={80}
+            closeDelay={200}
+            render={<SidebarMenuButton isActive={settingsActive} />}
+          >
+            <Settings />
+            <span>Settings</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="start" sideOffset={12} className="min-w-44">
+            {settingsNavigation.map((item) => (
+              <DropdownMenuItem
+                key={item.href}
+                className={isSettingsItemActive(pathname, item.href) ? "bg-accent text-accent-foreground" : undefined}
+                render={<Link href={item.href} />}
+              >
+                <item.icon />
+                {item.title}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    )
+  }
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton isActive={settingsActive} onClick={() => setSettingsOpen((open) => !open)}>
+        <Settings />
+        <span>Settings</span>
+        <ChevronRight className={cn("ml-auto transition-transform", settingsOpen && "rotate-90")} />
+      </SidebarMenuButton>
+      {settingsOpen ? (
+        <SidebarMenuSub>
+          {settingsNavigation.map((item) => (
+            <SidebarMenuSubItem key={item.href}>
+              <SidebarMenuSubButton
+                isActive={isSettingsItemActive(pathname, item.href)}
+                render={<Link href={item.href} />}
+              >
+                <item.icon />
+                <span>{item.title}</span>
+              </SidebarMenuSubButton>
+            </SidebarMenuSubItem>
+          ))}
+        </SidebarMenuSub>
+      ) : null}
+    </SidebarMenuItem>
+  )
+}
+
 export function AdminSidebar() {
   const pathname = usePathname()
   const SiteIcon = adminSiteLink.icon
-  const settingsActive = pathname.startsWith("/admin/settings")
-  const [settingsOpen, setSettingsOpen] = useState(settingsActive)
 
   return (
     <Sidebar collapsible="icon" variant="floating">
@@ -149,32 +210,7 @@ export function AdminSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Other</SidebarGroupLabel>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip="Settings"
-                isActive={settingsActive}
-                onClick={() => setSettingsOpen((open) => !open)}
-              >
-                <Settings />
-                <span>Settings</span>
-                <ChevronRight className={cn("ml-auto transition-transform", settingsOpen && "rotate-90")} />
-              </SidebarMenuButton>
-              {settingsOpen ? (
-                <SidebarMenuSub>
-                  {settingsNavigation.map((item) => (
-                    <SidebarMenuSubItem key={item.href}>
-                      <SidebarMenuSubButton
-                        isActive={isSettingsItemActive(pathname, item.href)}
-                        render={<Link href={item.href} />}
-                      >
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  ))}
-                </SidebarMenuSub>
-              ) : null}
-            </SidebarMenuItem>
+            <SettingsMenu />
             <SidebarMenuItem>
               <SidebarMenuButton tooltip={adminSiteLink.title} render={<Link href={adminSiteLink.href} />}>
                 <SiteIcon />
