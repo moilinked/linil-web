@@ -6,10 +6,10 @@ import { AuthHeaderActions } from "@/features/auth/components/auth-header-action
 export function SiteHeader() {
   return (
     <header className="w-full px-3 py-3 sm:px-6">
-      <div className="mx-auto grid min-h-17.5 w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center rounded-full border border-border bg-card/90 px-4 shadow-(--shadow-panel) backdrop-blur-md sm:px-6.25">
+      <div className="mx-auto grid min-h-17.5 w-full max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center rounded-full border border-border bg-card/90 px-4 shadow-(--shadow-panel) backdrop-blur-md sm:px-6.25">
         <SiteLogo />
         <SiteNavigation />
-        <div className="flex items-center justify-end gap-1 sm:gap-2">
+        <div className="relative z-10 flex shrink-0 items-center justify-end gap-1 sm:gap-2">
           <SiteThemeToggle />
           <AuthHeaderActions />
         </div>

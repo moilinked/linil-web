@@ -7,6 +7,7 @@ export const siteConfig = {
   navigation: [
     { href: "/notes", label: "Notes" },
     { href: "/works", label: "Works" },
+    { href: "/chat", label: "Chat" },
   ],
   beian: {
     number: "粤ICP备2024331316号-3",

@@ -54,29 +54,36 @@ export function AuthHeaderActions() {
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger
         render={
           <button
             type="button"
             aria-label={user.name}
-            className="inline-flex rounded-full transition-opacity outline-none hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="inline-flex size-11 items-center justify-center rounded-full transition-opacity outline-none hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         }
       >
-        <Avatar>
+        <Avatar className="pointer-events-none">
           <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-52">
+      <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-52 min-w-52">
         <p className="truncate px-1.5 py-1 text-sm font-medium">{user.name}</p>
         <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link href="/chat" />}>
+        <DropdownMenuItem className="min-h-11" render={<Link href="/chat" />}>
           <MessageSquare aria-hidden="true" />
           Chat
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={handleLogout} disabled={isLoggingOut}>
+        <DropdownMenuItem
+          nativeButton
+          render={<button type="button" />}
+          className="min-h-11"
+          variant="destructive"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+        >
           <LogOut aria-hidden="true" />
           {isLoggingOut ? "Logging out…" : "Log out"}
         </DropdownMenuItem>
