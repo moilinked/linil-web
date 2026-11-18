@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { LogOut, MessageSquare } from "lucide-react"
+import { LogOut } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -71,15 +71,10 @@ export function AuthHeaderActions() {
       <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-52 min-w-52">
         <p className="truncate px-1.5 py-1 text-sm font-medium">{user.name}</p>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="min-h-11" render={<Link href="/chat" />}>
-          <MessageSquare aria-hidden="true" />
-          Chat
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem
           nativeButton
           render={<button type="button" />}
-          className="min-h-11"
+          className="min-h-11 w-full"
           variant="destructive"
           onClick={handleLogout}
           disabled={isLoggingOut}
