@@ -1,6 +1,5 @@
 import "server-only"
 
-const defaultSiteKey = "0x4AAAAAAF8MidLS6BmCnIDI"
 const developmentSiteKey = "1x00000000000000000000AA"
 
 export function getTurnstileSiteKey() {
@@ -13,7 +12,7 @@ export function getTurnstileSiteKey() {
     return developmentSiteKey
   }
 
-  return defaultSiteKey
+  return ""
 }
 
 export function getTurnstileSecret() {

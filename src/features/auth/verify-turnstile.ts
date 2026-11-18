@@ -19,26 +19,17 @@ export async function verifyTurnstileToken(token: string, remoteIp: string) {
 
   const secret = getTurnstileSecret()
   if (!secret) {
-    if (process.env.NODE_ENV === "development") {
-      return { ok: true as const }
-    }
+    if (process.env.NODE_ENV === "development") return { ok: true as const }
     return { ok: false as const, error: "Turnstile is not configured" }
   }
 
-  const body = new URLSearchParams({
-    secret,
-    response: responseToken,
-  })
-  if (remoteIp) {
-    body.set("remoteip", remoteIp)
-  }
+  const body = new URLSearchParams({ secret, response: responseToken })
+  if (remoteIp) body.set("remoteip", remoteIp)
 
   try {
     const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body,
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
