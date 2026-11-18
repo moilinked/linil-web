@@ -119,8 +119,8 @@ function ReadingCard({ note, featured }: { note: PublicNote; featured: boolean }
       <article
         className={
           featured
-            ? "flex flex-col gap-6 rounded-2xl border border-border bg-card/90 p-6 shadow-(--shadow-panel) transition duration-200 group-hover:-translate-y-1 group-hover:shadow-[var(--shadow-panel-strong)] sm:p-8"
-            : "flex flex-col gap-5 rounded-2xl border border-border bg-card/80 p-5 shadow-(--shadow-panel) transition duration-200 group-hover:-translate-y-1 group-hover:bg-card group-hover:shadow-[var(--shadow-panel-strong)]"
+            ? "flex flex-col gap-6 rounded-2xl border border-border bg-card/90 p-6 shadow-(--shadow-panel) transition duration-200 group-hover:-translate-y-1 group-hover:shadow-(--shadow-panel-strong) sm:p-8"
+            : "flex flex-col gap-5 rounded-2xl border border-border bg-card/80 p-5 shadow-(--shadow-panel) transition duration-200 group-hover:-translate-y-1 group-hover:bg-card group-hover:shadow-(--shadow-panel-strong)"
         }
       >
         <div
@@ -162,7 +162,7 @@ function ReadingCard({ note, featured }: { note: PublicNote; featured: boolean }
                 {note.summary}
               </p>
             ) : (
-              <p className="mt-3 text-sm text-muted-foreground">这篇笔记没有摘要。</p>
+              <p className="mt-3 text-sm text-muted-foreground">-</p>
             )}
           </div>
           {showCover ? (
